@@ -19,18 +19,19 @@ export async function POST(request: NextRequest) {
     // Compose images
     const response = await client.compose({
       images: validatedData.images.map((imageData) => ({
-        dataBase64: imageData,
+        data: imageData,
         mimeType: 'image/png', // TODO: detect from data
       })),
       prompt: validatedData.prompt,
-      outputFormat: validatedData.format,
     });
+
+    const base64Data = Buffer.from(response.image.data).toString('base64');
 
     return NextResponse.json({
       success: true,
       data: {
-        imageData: response.imageData,
-        mimeType: response.mimeType,
+        imageData: base64Data,
+        mimeType: response.image.mimeType,
         tokenCost,
       },
     });

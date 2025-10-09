@@ -19,19 +19,19 @@ export async function POST(request: NextRequest) {
     // Edit image
     const response = await client.edit({
       image: {
-        dataBase64: validatedData.imageData,
+        data: validatedData.imageData,
         mimeType: 'image/png', // TODO: detect from data
       },
       prompt: validatedData.prompt,
-      negativePrompt: validatedData.negativePrompt,
-      outputFormat: validatedData.format,
     });
+
+    const base64Data = Buffer.from(response.image.data).toString('base64');
 
     return NextResponse.json({
       success: true,
       data: {
-        imageData: response.imageData,
-        mimeType: response.mimeType,
+        imageData: base64Data,
+        mimeType: response.image.mimeType,
         tokenCost,
       },
     });

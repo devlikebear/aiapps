@@ -20,17 +20,18 @@ export async function POST(request: NextRequest) {
     const response = await client.generate({
       prompt: validatedData.prompt,
       negativePrompt: validatedData.negativePrompt,
-      width: validatedData.width,
-      height: validatedData.height,
-      outputFormat: validatedData.format,
       seed: validatedData.seed,
     });
+
+    // Get first generated image
+    const image = response.images[0];
+    const base64Data = Buffer.from(image.data).toString('base64');
 
     return NextResponse.json({
       success: true,
       data: {
-        imageData: response.imageData,
-        mimeType: response.mimeType,
+        imageData: base64Data,
+        mimeType: image.mimeType,
         tokenCost,
       },
     });

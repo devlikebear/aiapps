@@ -57,7 +57,7 @@ export default function CreatePage() {
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean),
-      tokenCost,
+      tokenCost: tokenCost ?? undefined,
     });
 
     alert('라이브러리에 저장되었습니다');

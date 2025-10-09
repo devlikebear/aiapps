@@ -19,22 +19,23 @@ export async function POST(request: NextRequest) {
     // Transfer style
     const response = await client.styleTransfer({
       baseImage: {
-        dataBase64: validatedData.baseImage,
+        data: validatedData.baseImage,
         mimeType: 'image/png', // TODO: detect from data
       },
       styleImage: {
-        dataBase64: validatedData.styleImage,
+        data: validatedData.styleImage,
         mimeType: 'image/png', // TODO: detect from data
       },
       prompt: validatedData.prompt,
-      outputFormat: validatedData.format,
     });
+
+    const base64Data = Buffer.from(response.image.data).toString('base64');
 
     return NextResponse.json({
       success: true,
       data: {
-        imageData: response.imageData,
-        mimeType: response.mimeType,
+        imageData: base64Data,
+        mimeType: response.image.mimeType,
         tokenCost,
       },
     });

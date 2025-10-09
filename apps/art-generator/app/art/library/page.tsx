@@ -20,9 +20,9 @@ export default function LibraryPage() {
 
   const handleFilter = () => {
     filterLibrary({
-      style: filters.style || undefined,
-      artType: filters.artType || undefined,
-      mood: filters.mood || undefined,
+      style: (filters.style || undefined) as any,
+      artType: (filters.artType || undefined) as any,
+      mood: (filters.mood || undefined) as any,
     });
   };
 
