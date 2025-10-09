@@ -15,7 +15,9 @@ import {
 } from '../types';
 
 export class MockGeminiImageClient {
-  async generate(request: ImageGenerateRequest): Promise<ImageGenerateResponse> {
+  async generate(
+    request: ImageGenerateRequest
+  ): Promise<ImageGenerateResponse> {
     const numberOfImages = request.numberOfImages || 1;
     const images: GeneratedImage[] = [];
 
@@ -37,7 +39,7 @@ export class MockGeminiImageClient {
     };
   }
 
-  async edit(request: ImageEditRequest): Promise<ImageEditResponse> {
+  async edit(_request: ImageEditRequest): Promise<ImageEditResponse> {
     return {
       image: {
         data: new ArrayBuffer(1024 * 1024),
@@ -50,7 +52,7 @@ export class MockGeminiImageClient {
     };
   }
 
-  async compose(request: ImageComposeRequest): Promise<ImageComposeResponse> {
+  async compose(_request: ImageComposeRequest): Promise<ImageComposeResponse> {
     return {
       image: {
         data: new ArrayBuffer(1024 * 1024),
@@ -64,7 +66,7 @@ export class MockGeminiImageClient {
   }
 
   async styleTransfer(
-    request: ImageStyleTransferRequest
+    _request: ImageStyleTransferRequest
   ): Promise<ImageStyleTransferResponse> {
     return {
       image: {

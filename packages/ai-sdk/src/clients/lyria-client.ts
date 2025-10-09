@@ -9,7 +9,6 @@ import {
   LyriaRequest,
   LyriaResponse,
   LyriaStreamResponse,
-  LyriaClientEvents,
   ConnectionState,
   NetworkError,
   ValidationError,
@@ -29,7 +28,8 @@ const DEFAULT_CONFIG: Partial<LyriaClientConfig> = {
   maxRetries: 3,
   reconnectAttempts: 5,
   reconnectDelay: 2000,
-  wsUrl: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.StreamGenerateContent',
+  wsUrl:
+    'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.StreamGenerateContent',
 };
 
 export class LyriaClient extends EventEmitter {
@@ -42,7 +42,10 @@ export class LyriaClient extends EventEmitter {
 
   constructor(config: LyriaClientConfig) {
     super();
-    this.config = { ...DEFAULT_CONFIG, ...config } as Required<LyriaClientConfig>;
+    this.config = {
+      ...DEFAULT_CONFIG,
+      ...config,
+    } as Required<LyriaClientConfig>;
 
     // 레이트 리미터: 분당 60회 요청
     this.rateLimiter = new RateLimiter({
@@ -195,11 +198,17 @@ export class LyriaClient extends EventEmitter {
       throw new ValidationError('BPM must be between 60 and 200');
     }
 
-    if (request.density !== undefined && (request.density < 0 || request.density > 1)) {
+    if (
+      request.density !== undefined &&
+      (request.density < 0 || request.density > 1)
+    ) {
       throw new ValidationError('Density must be between 0 and 1');
     }
 
-    if (request.brightness !== undefined && (request.brightness < 0 || request.brightness > 1)) {
+    if (
+      request.brightness !== undefined &&
+      (request.brightness < 0 || request.brightness > 1)
+    ) {
       throw new ValidationError('Brightness must be between 0 and 1');
     }
   }
@@ -218,47 +227,53 @@ export class LyriaClient extends EventEmitter {
     this.requestId = `lyria_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.audioChunks = [];
 
-    logger.info('Starting Lyria music generation', { requestId: this.requestId });
+    logger.info('Starting Lyria music generation', {
+      requestId: this.requestId,
+    });
 
-    return new Promise(async (resolve, reject) => {
-      try {
-        // WebSocket 연결
-        await withRetry(() => this.connect(), {
-          maxRetries: this.config.reconnectAttempts,
-          initialDelay: this.config.reconnectDelay,
-        });
+    return new Promise((resolve, reject) => {
+      const initializeConnection = async () => {
+        try {
+          // WebSocket 연결
+          await withRetry(() => this.connect(), {
+            maxRetries: this.config.reconnectAttempts,
+            initialDelay: this.config.reconnectDelay,
+          });
 
-        // complete 이벤트 리스너
-        this.once('complete', (response: LyriaResponse) => {
-          resolve(response);
-        });
+          // complete 이벤트 리스너
+          this.once('complete', (response: LyriaResponse) => {
+            resolve(response);
+          });
 
-        // error 이벤트 리스너
-        this.once('error', (error: Error) => {
+          // error 이벤트 리스너
+          this.once('error', (error: Error) => {
+            this.cleanup();
+            reject(error);
+          });
+
+          // 요청 전송
+          this.ws!.send(
+            JSON.stringify({
+              prompt: request.prompt,
+              weightedPrompts: request.weightedPrompts,
+              config: {
+                bpm: request.bpm || 120,
+                density: request.density || 0.5,
+                brightness: request.brightness || 0.5,
+                scale: request.scale || 'major',
+                guidanceLevel: request.guidanceLevel || 0.5,
+                mode: request.mode || 'quality',
+              },
+              duration: request.duration || 30,
+            })
+          );
+        } catch (error) {
           this.cleanup();
           reject(error);
-        });
+        }
+      };
 
-        // 요청 전송
-        this.ws!.send(
-          JSON.stringify({
-            prompt: request.prompt,
-            weightedPrompts: request.weightedPrompts,
-            config: {
-              bpm: request.bpm || 120,
-              density: request.density || 0.5,
-              brightness: request.brightness || 0.5,
-              scale: request.scale || 'major',
-              guidanceLevel: request.guidanceLevel || 0.5,
-              mode: request.mode || 'quality',
-            },
-            duration: request.duration || 30,
-          })
-        );
-      } catch (error) {
-        this.cleanup();
-        reject(error);
-      }
+      initializeConnection();
     });
   }
 
