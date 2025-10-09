@@ -18,10 +18,205 @@
 ## 아키텍처 개요
 
 - **클라이언트**: Next.js App Router, React Server Components, Tailwind UI, Zustand 상태 관리
-- **서버**: Next.js Route Handler로 API 레이어 구성
+- **서버**: Next.js Route Handler로 API 레이어 구성 (프록시 역할만)
 - **AI 통합**: `lib/ai/` 디렉토리에 Gemini API 클라이언트 구현
-- **스토리지**: 클라이언트 메모리 및 Blob URL (프로토타입), 향후 Vercel Blob 또는 Supabase
+- **스토리지**: IndexedDB (클라이언트 브라우저), 서버 저장소 미사용
 - **관측 가능성**: Vercel Analytics와 커스텀 로깅
+
+---
+
+## 🗄️ 데이터 저장 전략
+
+### 클라이언트 중심 아키텍처
+
+**저장 위치**: IndexedDB (브라우저 로컬 저장소)
+
+- ✅ 생성된 오디오/이미지 파일
+- ✅ 프롬프트 히스토리 및 메타데이터
+- ✅ 사용자 설정 및 프리셋
+- ✅ 생성 캐시 (중복 방지)
+
+**서버 저장소**: 없음
+
+- ❌ 서버에 사용자 데이터 저장 안 함
+- ❌ 백엔드 데이터베이스 미사용
+- ✅ 서버는 정적 파일 호스팅 및 API 프록시만 담당
+
+### 효율적인 캐싱 전략
+
+**프롬프트 기반 캐싱**:
+
+```typescript
+// lib/storage/cache.ts
+interface CacheKey {
+  type: 'audio' | 'image';
+  prompt: string;
+  parameters: Record<string, any>; // BPM, resolution, style 등
+}
+
+interface CacheEntry {
+  key: string; // SHA-256 해시
+  data: ArrayBuffer | Blob;
+  metadata: object;
+  createdAt: Date;
+  accessCount: number;
+}
+```
+
+**캐시 동작**:
+
+1. **생성 요청 시**: 프롬프트 + 파라미터 해싱 → IndexedDB 조회
+2. **캐시 히트**: 저장된 결과 즉시 반환 (API 비용 절약)
+3. **캐시 미스**: API 호출 → 결과 저장 → 반환
+4. **캐시 정책**: LRU (Least Recently Used), 최대 100개 또는 1GB 제한
+
+**비용 절감 효과**:
+
+- 동일 프롬프트 재생성 방지
+- API 호출 횟수 감소 (최대 70-80% 절감)
+- 네트워크 트래픽 감소
+
+### 향후 확장 옵션
+
+**클라우드 저장소 (선택 사항)**:
+
+- Supabase Storage: 사용자 계정 기반 클라우드 백업
+- Vercel Blob: 대용량 파일 저장
+- 조건: 사용자 명시적 동의 + 유료 플랜
+
+---
+
+## 🔒 보안 및 비용 관리
+
+### API 키 보안 원칙
+
+**절대 금지 사항** ❌:
+
+- 서버에 API 키 저장
+- 환경 변수에 사용자 키 저장
+- Git에 키 커밋
+- 평문으로 localStorage 저장
+- 서버 로그에 키 기록
+
+**권장 보안 방법** ✅:
+
+**1. 클라이언트 사이드 암호화**:
+
+```typescript
+// lib/security/encryption.ts
+import CryptoJS from 'crypto-js';
+
+// 디바이스 핑거프린트로 암호화 키 생성
+const getDeviceKey = async (): Promise<string> => {
+  const fingerprint = await generateFingerprint(); // Canvas, WebGL, User-Agent 조합
+  return CryptoJS.SHA256(fingerprint).toString();
+};
+
+// AES-256 암호화
+const encryptApiKey = (apiKey: string): string => {
+  const deviceKey = await getDeviceKey();
+  return CryptoJS.AES.encrypt(apiKey, deviceKey).toString();
+};
+
+// IndexedDB에 암호화된 키 저장
+const storeEncryptedKey = (encryptedKey: string) => {
+  // IndexedDB 저장 로직
+};
+```
+
+**2. 세션 기반 평문 저장**:
+
+- sessionStorage에만 평문 임시 저장 (브라우저 탭 닫으면 삭제)
+- 사용자가 매 세션마다 키 입력 또는 암호화된 키 복호화
+
+**3. 사용자 직접 관리**:
+
+- 사용자가 직접 Gemini API Key 발급
+- 앱은 키를 중개하지 않고 클라이언트에서 직접 API 호출
+- 서버는 API 키를 절대 접근하지 않음
+
+### 비용 관리 시스템
+
+**투명한 비용 구조**:
+
+```typescript
+// components/CostEstimator.tsx
+interface CostEstimate {
+  audioGeneration: {
+    duration: number; // 초
+    estimatedCost: number; // USD
+    tokensUsed: number;
+  };
+  imageGeneration: {
+    resolution: string;
+    batchSize: number;
+    estimatedCost: number;
+  };
+}
+
+const CostDashboard = () => {
+  const [dailyUsage, setDailyUsage] = useState<CostEstimate[]>([]);
+  const [monthlyTotal, setMonthlyTotal] = useState(0);
+  const [dailyLimit, setDailyLimit] = useState(10); // USD
+
+  // 생성 전 비용 표시
+  const showEstimate = (params: GenerationParams) => {
+    const estimate = calculateCost(params);
+    return `예상 비용: $${estimate.toFixed(4)}`;
+  };
+
+  // 사용자 설정 가능한 한도
+  const setUserLimit = (limit: number) => {
+    localStorage.setItem('dailyLimit', limit.toString());
+  };
+
+  return <div>{/* 비용 대시보드 UI */}</div>;
+};
+```
+
+**사용량 추적**:
+
+- 로컬 IndexedDB에 모든 생성 내역 저장
+- 일별/월별 사용량 집계 및 시각화
+- 비용 한도 도달 시 경고 및 생성 차단
+
+**서버 비용 제로 전략**:
+
+- ✅ 모든 API 호출은 사용자 브라우저에서 직접
+- ✅ 서버는 정적 파일만 호스팅 (Vercel 무료 플랜)
+- ✅ 사용자가 100% API 비용 부담 및 관리
+- ✅ 개발자는 인프라 비용 없음
+
+### 보안 체크리스트
+
+#### Phase 1: 기본 보안 (즉시 구현)
+
+- [ ] API 키 클라이언트 암호화 구현
+- [ ] sessionStorage 평문 저장 로직
+- [ ] 서버 사이드 키 접근 금지 검증
+- [ ] Git에 `.env` 파일 제외
+
+#### Phase 2: 비용 관리 (Phase 2-3 완료 후)
+
+- [ ] 비용 추정 계산기 구현
+- [ ] 실시간 사용량 대시보드
+- [ ] 일일/월별 한도 설정 UI
+- [ ] 로컬 사용 내역 저장
+
+#### Phase 3: 고급 보안 (Phase 5)
+
+- [ ] 디바이스 핑거프린트 기반 암호화
+- [ ] 키 만료 정책 (30일)
+- [ ] 키 무효화 및 재발급 플로우
+- [ ] 보안 감사 로그
+
+#### Phase 4: 옵션 기능 (Phase 6 이후)
+
+- [ ] Supabase 통합 (사용자 계정 기반)
+- [ ] 클라우드 백업 동의 UI
+- [ ] 계정 간 데이터 동기화
+
+---
 
 ## 공통 마일스톤
 1. 저장소 부트스트랩: Next.js 15 템플릿, Tailwind v3 설정, Vitest/Playwright 중심의 린트·테스트 도구 구성.
