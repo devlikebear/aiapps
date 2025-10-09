@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { useAudioStore } from '@/stores/audio-store';
-import { AudioPrompt, GENRES, MOODS, INSTRUMENTS, SCALES } from '@/lib/schemas/audio';
+import { AudioPrompt, GENRES, MOODS, INSTRUMENTS } from '@/lib/schemas/audio';
 import { estimateTokenCost, formatTokenCost } from '@/lib/utils/token-estimator';
 import { pcmToWav, normalizePCM, applyFade, wavToBlob, downloadAudio } from '@/lib/utils/audio-converter';
 
@@ -88,7 +88,10 @@ export default function CreateAudioPage() {
             <select
               className="w-full p-2 border rounded-lg"
               value={prompt.genre || ''}
-              onChange={(e) => setPrompt({ ...prompt, genre: e.target.value as any })}
+              onChange={(e) => {
+                const value = e.target.value;
+                setPrompt({ ...prompt, genre: value ? (value as typeof prompt.genre) : undefined });
+              }}
             >
               <option value="">선택 안함</option>
               {GENRES.map((genre) => (
@@ -105,7 +108,10 @@ export default function CreateAudioPage() {
             <select
               className="w-full p-2 border rounded-lg"
               value={prompt.mood || ''}
-              onChange={(e) => setPrompt({ ...prompt, mood: e.target.value as any })}
+              onChange={(e) => {
+                const value = e.target.value;
+                setPrompt({ ...prompt, mood: value ? (value as typeof prompt.mood) : undefined });
+              }}
             >
               <option value="">선택 안함</option>
               {MOODS.map((mood) => (

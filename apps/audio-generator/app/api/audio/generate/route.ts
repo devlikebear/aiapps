@@ -88,11 +88,12 @@ export async function POST(request: NextRequest) {
 
           // 에러 이벤트 리스너
           client.once('error', (error) => {
+            const errorCode = 'code' in error ? String(error.code) : 'UNKNOWN_ERROR';
             const data = JSON.stringify({
               type: 'error',
               error: {
                 message: error.message,
-                code: (error as any).code || 'UNKNOWN_ERROR',
+                code: errorCode,
               },
             });
 
