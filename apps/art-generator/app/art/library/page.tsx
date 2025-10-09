@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useImageStore } from '../../../stores/image-store';
-import { ART_STYLES, ART_TYPES, MOODS, type ImageAsset } from '../../../lib/schemas/image';
+import {
+  ART_STYLES,
+  ART_TYPES,
+  MOODS,
+  type ImageAsset,
+  type LibraryQuery
+} from '../../../lib/schemas/image';
 
 export default function LibraryPage() {
   const { filteredLibrary, loadLibrary, deleteFromLibrary, filterLibrary } = useImageStore();
 
   const [selectedAsset, setSelectedAsset] = useState<ImageAsset | null>(null);
-  const [filters, setFilters] = useState({
-    style: '',
-    artType: '',
-    mood: '',
+  const [filters, setFilters] = useState<LibraryQuery>({
+    style: undefined,
+    artType: undefined,
+    mood: undefined,
   });
 
   useEffect(() => {
@@ -19,15 +25,11 @@ export default function LibraryPage() {
   }, [loadLibrary]);
 
   const handleFilter = () => {
-    filterLibrary({
-      style: (filters.style || undefined) as any,
-      artType: (filters.artType || undefined) as any,
-      mood: (filters.mood || undefined) as any,
-    });
+    filterLibrary(filters);
   };
 
   const handleReset = () => {
-    setFilters({ style: '', artType: '', mood: '' });
+    setFilters({ style: undefined, artType: undefined, mood: undefined });
     loadLibrary();
   };
 
@@ -58,8 +60,11 @@ export default function LibraryPage() {
             <div>
               <label className="block text-sm font-medium mb-2">스타일</label>
               <select
-                value={filters.style}
-                onChange={(e) => setFilters({ ...filters, style: e.target.value })}
+                value={filters.style || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilters({ ...filters, style: value ? (value as typeof filters.style) : undefined });
+                }}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">전체</option>
@@ -74,8 +79,11 @@ export default function LibraryPage() {
             <div>
               <label className="block text-sm font-medium mb-2">아트 타입</label>
               <select
-                value={filters.artType}
-                onChange={(e) => setFilters({ ...filters, artType: e.target.value })}
+                value={filters.artType || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilters({ ...filters, artType: value ? (value as typeof filters.artType) : undefined });
+                }}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">전체</option>
@@ -90,8 +98,11 @@ export default function LibraryPage() {
             <div>
               <label className="block text-sm font-medium mb-2">무드</label>
               <select
-                value={filters.mood}
-                onChange={(e) => setFilters({ ...filters, mood: e.target.value })}
+                value={filters.mood || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilters({ ...filters, mood: value ? (value as typeof filters.mood) : undefined });
+                }}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">전체</option>

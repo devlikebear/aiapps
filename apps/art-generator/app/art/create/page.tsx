@@ -116,7 +116,10 @@ export default function CreatePage() {
               <label className="block text-sm font-medium mb-2">스타일</label>
               <select
                 value={prompt.style || ''}
-                onChange={(e) => setPrompt({ ...prompt, style: e.target.value as any })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPrompt({ ...prompt, style: value ? (value as typeof prompt.style) : undefined });
+                }}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">선택하지 않음</option>
@@ -133,7 +136,10 @@ export default function CreatePage() {
               <label className="block text-sm font-medium mb-2">아트 타입</label>
               <select
                 value={prompt.artType || ''}
-                onChange={(e) => setPrompt({ ...prompt, artType: e.target.value as any })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPrompt({ ...prompt, artType: value ? (value as typeof prompt.artType) : undefined });
+                }}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">선택하지 않음</option>
@@ -150,7 +156,10 @@ export default function CreatePage() {
               <label className="block text-sm font-medium mb-2">무드</label>
               <select
                 value={prompt.mood || ''}
-                onChange={(e) => setPrompt({ ...prompt, mood: e.target.value as any })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPrompt({ ...prompt, mood: value ? (value as typeof prompt.mood) : undefined });
+                }}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">선택하지 않음</option>
@@ -195,7 +204,7 @@ export default function CreatePage() {
               <label className="block text-sm font-medium mb-2">포맷</label>
               <select
                 value={prompt.format}
-                onChange={(e) => setPrompt({ ...prompt, format: e.target.value as any })}
+                onChange={(e) => setPrompt({ ...prompt, format: e.target.value as typeof prompt.format })}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 {IMAGE_FORMATS.map((format) => (
