@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ai-blue: #0ea5e9;
+    --ai-purple: #a855f7;
+    --ai-pink: #ec4899;
+    --ai-cyan: #06b6d4;
+    --ai-green: #10b981;
+  }
+
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+      'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+      'Helvetica Neue', sans-serif;
+    background: linear-gradient(135deg, #1e1b4b 0%, #1f2937 50%, #111827 100%);
+    min-height: 100vh;
+    position: relative;
+    color: #f3f4f6;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(
+        rgba(14, 165, 233, 0.03) 1px,
+        transparent 1px
+      ),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+@layer components {
+  .app-card {
+    @apply relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-sky-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-sky-500/20;
+  }
+
+  .app-card-featured {
+    @apply relative bg-gradient-to-br from-purple-900/50 to-slate-900 rounded-xl p-8 border border-purple-500/30 hover:border-purple-400/60 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/30;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-semibold rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-sky-500/30 hover:shadow-xl hover:shadow-sky-500/40;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40;
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 border-2 border-sky-500/50 text-sky-400 font-semibold rounded-lg hover:bg-sky-500/10 hover:border-sky-400 transition-all duration-200;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-blue-500 to-purple-600;
+  }
+
+  .feature-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-sky-500/20 to-purple-500/20 border border-sky-500/30 text-sky-300;
+  }
+}
+
+@layer utilities {
+  .glow-text {
+    text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
+  }
+
+  .glow-text-purple {
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  }
+}

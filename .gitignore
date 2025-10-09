@@ -4,7 +4,12 @@ CLAUDE.md
 AGENTS.md
 
 # Plans
-PLAN.md
+*PLAN.md
+RESTRUCTURE_PLAN.md
+
+# Backup files
+*.old
+*-backup/
 
 # Dependencies
 node_modules

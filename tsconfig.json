@@ -1,32 +1,27 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "checkJs": false,
+    "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "isolatedModules": true,
-    "incremental": true,
     "jsx": "preserve",
-    "paths": {
-      "@/*": ["./*"],
-      "@aiapps/ai-sdk": ["./packages/ai-sdk/src"],
-      "@aiapps/ui": ["./packages/ui/src"],
-      "@aiapps/shared": ["./packages/shared/src"]
-    },
+    "incremental": true,
     "plugins": [
       {
         "name": "next"
       }
-    ]
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/.next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next", "dist", "build"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "apps-old", "packages-old"]
 }
