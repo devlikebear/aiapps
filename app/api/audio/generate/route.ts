@@ -24,12 +24,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // API Key 확인
-    const apiKey = process.env.GEMINI_API_KEY;
+    // API 키를 헤더에서 가져오기
+    const apiKey = request.headers.get('X-API-Key');
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY not configured' },
-        { status: 500 }
+        {
+          error: 'API key not provided. Please set your Gemini API key.',
+        },
+        { status: 401 }
       );
     }
 

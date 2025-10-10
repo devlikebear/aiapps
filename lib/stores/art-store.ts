@@ -5,6 +5,7 @@ import type {
   ImageMetadata,
   ArtStyle,
 } from '@/lib/art/types';
+import { saveImage } from '@/lib/storage/indexed-db';
 
 interface GeneratedImage {
   id: string;
@@ -82,6 +83,18 @@ export const useArtStore = create<ArtState>((set, get) => ({
       data: img.data,
       metadata: img.metadata,
     }));
+
+    // IndexedDB에 저장 (비동기이지만 await하지 않음)
+    newImages.forEach((img) => {
+      saveImage({
+        id: img.id,
+        blobUrl: img.blobUrl,
+        data: img.data,
+        metadata: img.metadata,
+      }).catch((err) =>
+        console.error('Failed to save image to IndexedDB:', err)
+      );
+    });
 
     set((state) => {
       // 히스토리에 추가 (최근 20개만 유지)

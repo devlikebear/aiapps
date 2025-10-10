@@ -8,6 +8,7 @@ import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType, AudioFormat } from '@/lib/audio/types';
 import AudioPlayer from '@/components/audio/AudioPlayer';
 import { downloadAudio } from '@/lib/audio/converter';
+import { getApiKey } from '@/lib/api-key/storage';
 
 function CreatePageContent() {
   const router = useRouter();
@@ -70,13 +71,25 @@ function CreatePageContent() {
       return;
     }
 
+    // API 키 확인
+    const apiKey = getApiKey('gemini');
+    if (!apiKey) {
+      setError(
+        'API 키가 설정되지 않았습니다. 헤더의 🔑 버튼을 클릭하여 API 키를 등록해주세요.'
+      );
+      return;
+    }
+
     startGeneration();
 
     try {
       // API 요청
       const response = await fetch('/api/audio/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
         body: JSON.stringify({
           type,
           genre,

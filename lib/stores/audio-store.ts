@@ -12,6 +12,7 @@ import type {
   GameGenre,
   AudioType,
 } from '@/lib/audio/types';
+import { saveAudio } from '@/lib/storage/indexed-db';
 
 interface GeneratedAudio {
   id: string;
@@ -112,6 +113,16 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
       metadata,
       createdAt: new Date(),
     };
+
+    // IndexedDB에 저장 (비동기이지만 await하지 않음)
+    const arrayBuffer = audioData;
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    saveAudio({
+      id: metadata.id,
+      blobUrl: audioUrl,
+      data: base64,
+      metadata,
+    }).catch((err) => console.error('Failed to save audio to IndexedDB:', err));
 
     set({
       currentAudio: generatedAudio,

@@ -147,7 +147,6 @@ export async function POST(request: NextRequest) {
           }
 
           const imageBase64 = imagePart.inlineData.data;
-          const mimeType = imagePart.inlineData.mimeType || 'image/png';
 
           // 해상도 정보 파싱 (요청 파라미터에서 가져옴)
           const { width, height } = parseResolution(resolution);
