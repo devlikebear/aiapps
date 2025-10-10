@@ -816,14 +816,15 @@ const CostDashboard = () => {
 | Phase 0 | 프로젝트 초기화 | 1-2일 | ✅ 완료 |
 | Phase 1 | 공유 AI SDK 구축 | 2-3일 | ✅ 완료 |
 | Phase 2 | 앱 1 - 오디오 생성기 | 5-7일 | ✅ 완료 (Gemini API 연동 대기) |
-| Phase 3 | 앱 2 - 아트 생성기 | 5-7일 | 🔄 진행 예정 |
+| Phase 3 | 앱 2 - 아트 생성기 | 5-7일 | ✅ 완료 (Gemini API 연동 대기) |
+| **Phase 3.5** | **UX 개선 & 통합 라이브러리** | **2-3일** | **✅ 완료** |
 | Phase 4 | 공통 UI 키트 | 2-3일 | 📋 계획 중 |
 | Phase 5 | 보안/관측 가능성 | 2-3일 | 📋 계획 중 |
 | Phase 6 | 배포 및 프로덕션 | 2-3일 | 📋 계획 중 |
 | Phase 7 | 테스트/버그 수정 | 1-2일 | 📋 계획 중 |
 | Phase 8 | 론칭 및 모니터링 | 진행 중 | 📋 계획 중 |
 
-**현재 진행 상황**: Phase 2 완료, Phase 3 준비 중
+**현재 진행 상황**: Phase 3.5 완료, Phase 3.6 (태그 필터링) 또는 Phase 4 준비 중
 
 **주요 완료 항목**:
 
@@ -831,9 +832,17 @@ const CostDashboard = () => {
 - ✅ Tailwind CSS 설정 완료
 - ✅ AI SDK 기본 구조 (타입 정의 및 유틸리티)
 - ✅ 오디오 생성기 전체 UI 및 로직 구현
+- ✅ 아트 생성기 전체 UI 및 로직 구현
+- ✅ Global Navigation Bar 구현
+- ✅ 단일 페이지 생성 UI (오디오/아트)
+- ✅ 통합 라이브러리 페이지 (`/library`)
+- ✅ IndexedDB 태그 시스템 구현
+- ✅ 태그 자동 생성 유틸리티
 - ✅ GitHub Issue-based 개발 워크플로우 적용
 
-**다음 단계**: Phase 3 (AI 2D 게임 아트 생성기) 시작
+**다음 단계**: Phase 3.6 (태그 필터링 UI 및 유사 미디어 표시) 또는 Phase 4 시작
+
+**Phase 3.5 상세 내용**: 문서 하단의 "Phase 3.5: UX 개선 및 통합 라이브러리" 섹션 참조
 
 ---
 
@@ -865,3 +874,198 @@ const CostDashboard = () => {
 4. **Phase 1 준비**
    - `packages/ai-sdk` 디렉토리 생성
    - Gemini API 문서 재확인
+# PLAN.md 업데이트 내용
+
+## Phase 3.5: UX 개선 및 통합 라이브러리 ✅ (완료)
+
+### 목표
+- 사용자 경험 개선을 위한 UI/UX 단순화
+- 통합 라이브러리 페이지 구축
+- 태그 시스템 구현으로 검색 및 필터링 강화
+
+### 완료된 작업
+
+#### 3.5.1 Global Navigation Bar ✅
+1. **컴포넌트: `components/GlobalNav.tsx`**
+   - [x] 고정 상단 네비게이션 바
+   - [x] 앱 빠른 링크 (오디오/아트/라이브러리)
+   - [x] 앱 검색 기능 (자동완성)
+   - [x] API 키 상태 표시
+   - [x] 모바일 반응형 디자인
+   - [x] 활성 경로 하이라이트
+
+2. **레이아웃 통합**
+   - [x] `/app/apps/layout.tsx` GlobalNav 적용
+   - [x] 모든 앱 페이지에서 일관된 네비게이션
+
+#### 3.5.2 단일 페이지 생성 UI ✅
+1. **오디오 생성기 단순화**
+   - [x] 기존 4단계 → 1단계로 단순화
+   - [x] `/apps/audio-generator/create` 통합 폼
+   - [x] 타입/장르 드롭다운 선택
+   - [x] 실시간 프리셋 정보 표시
+   - [x] 자동 duration 조정
+   - [x] 홈 페이지 리다이렉트
+
+2. **아트 생성기 단순화**
+   - [x] 기존 3단계 → 1단계로 단순화
+   - [x] `/apps/art-generator/create` 통합 폼
+   - [x] 스타일/해상도/품질 드롭다운
+   - [x] 배치 크기 슬라이더
+   - [x] 시드 입력
+   - [x] 실시간 비용 추정
+   - [x] 홈 페이지 리다이렉트
+
+#### 3.5.3 통합 라이브러리 페이지 ✅
+1. **페이지: `/library`**
+   - [x] 오디오와 이미지 통합 탐색
+   - [x] 탭 기반 인터페이스 (전체/오디오/이미지)
+   - [x] 검색 기능 (프롬프트 기반)
+   - [x] 스토리지 통계 표시 (개수, 용량)
+   - [x] 오디오 플레이어 컨트롤
+   - [x] 이미지 상세 모달
+   - [x] 다운로드 기능
+   - [x] 삭제 기능
+   - [x] Empty State 처리
+
+2. **GlobalNav 링크 업데이트**
+   - [x] `/library` 경로로 통합
+
+#### 3.5.4 태그 시스템 구현 ✅
+1. **IndexedDB 스키마 v2 업그레이드**
+   - [x] 데이터베이스 버전 1 → 2
+   - [x] 태그 인덱스 추가 (audio, images)
+   - [x] multiEntry 인덱스 지원
+   - [x] 기존 데이터 호환성 유지
+
+2. **저장 함수 업데이트**
+   - [x] `saveAudio()` tags 파라미터 추가
+   - [x] `saveImage()` tags 파라미터 추가
+   - [x] `getAllAudio()` tags 필드 보장
+   - [x] `getAllImages()` tags 필드 보장
+
+3. **태그 유틸리티 (`lib/utils/tags.ts`)**
+   - [x] `generateAudioTags()`: 오디오 옵션 → 태그 자동 생성
+   - [x] `generateImageTags()`: 이미지 옵션 → 태그 자동 생성
+   - [x] `normalizeTags()`: 중복 제거 및 정렬
+   - [x] `filterByTags()`: AND/OR 조건 필터링
+   - [x] `getAllTags()`: 고유 태그 목록 추출
+   - [x] `countByTag()`: 태그별 통계
+
+4. **태그 카테고리**
+   - **Audio**: type, genre, tempo (BPM), duration
+   - **Image**: style, resolution, quality, aspect ratio
+
+### 남은 작업 (Phase 3.6 예정)
+- [ ] 라이브러리 페이지 태그 필터링 UI
+- [ ] 태그 클릭으로 필터링 기능
+- [ ] 생성 페이지에 유사 미디어 실시간 표시
+- [ ] 현재 옵션과 동일한 태그를 가진 미디어 표시
+
+### 완료 기준
+- [x] GlobalNav 모든 페이지에서 정상 작동
+- [x] 오디오/아트 생성기 단일 페이지로 단순화
+- [x] 통합 라이브러리 페이지 정상 작동
+- [x] 태그 시스템 IndexedDB 통합
+- [x] 태그 자동 생성 유틸리티 구현
+- [x] TypeScript strict mode 통과
+- [x] Build 성공
+
+---
+
+## 타임라인 요약 (업데이트)
+
+| Phase | 작업 내용 | 예상 기간 | 상태 |
+|-------|----------|----------|------|
+| Phase 0 | 프로젝트 초기화 | 1-2일 | ✅ 완료 |
+| Phase 1 | 공유 AI SDK 구축 | 2-3일 | ✅ 완료 |
+| Phase 2 | 앱 1 - 오디오 생성기 | 5-7일 | ✅ 완료 (Gemini API 연동 대기) |
+| Phase 3 | 앱 2 - 아트 생성기 | 5-7일 | ✅ 완료 (Gemini API 연동 대기) |
+| **Phase 3.5** | **UX 개선 & 통합 라이브러리** | **2-3일** | **✅ 완료** |
+| Phase 4 | 공통 UI 키트 | 2-3일 | 📋 계획 중 |
+| Phase 5 | 보안/관측 가능성 | 2-3일 | 📋 계획 중 |
+| Phase 6 | 배포 및 프로덕션 | 2-3일 | 📋 계획 중 |
+| Phase 7 | 테스트/버그 수정 | 1-2일 | 📋 계획 중 |
+| Phase 8 | 론칭 및 모니터링 | 진행 중 | 📋 계획 중 |
+
+**현재 진행 상황**: Phase 3.5 완료, Phase 3.6 또는 Phase 4 준비 중
+
+**주요 완료 항목 (Phase 3.5 추가)**:
+- ✅ Global Navigation Bar 구현
+- ✅ 오디오/아트 생성기 UI 단순화 (4단계 → 1단계, 3단계 → 1단계)
+- ✅ 통합 라이브러리 페이지 (`/library`)
+- ✅ IndexedDB 태그 시스템 구현
+- ✅ 태그 자동 생성 유틸리티
+- ✅ 검색 기능 구현
+
+**다음 단계**: Phase 3.6 (태그 필터링 UI 및 유사 미디어 표시) 또는 Phase 4 시작
+
+---
+
+## 커밋 히스토리 (Phase 3.5)
+
+1. **feat(storage): implement IndexedDB persistence for generated media**
+   - IndexedDB 기본 구조 및 저장 함수 구현
+
+2. **feat(library): add library/gallery pages for media browsing**
+   - 개별 라이브러리/갤러리 페이지 생성
+
+3. **fix(hydration): resolve Next.js hydration error in navigation links**
+   - Hydration 오류 수정
+
+4. **feat(ux): add Global Navigation Bar and simplify audio generator**
+   - GlobalNav 추가 및 오디오 생성기 단순화
+
+5. **feat(ux): simplify art generator to single-page creation form**
+   - 아트 생성기 단순화
+
+6. **feat(library): create unified media library page**
+   - 통합 라이브러리 페이지 생성
+
+7. **feat(tags): implement tag system for media indexing**
+   - 태그 시스템 전체 구현
+
+---
+
+## 프로젝트 구조 변경사항
+
+```
+aiapps/
+├── app/
+│   ├── library/                    # ✨ NEW: 통합 라이브러리 페이지
+│   │   └── page.tsx
+│   └── apps/
+│       ├── layout.tsx              # 🔄 UPDATED: GlobalNav 적용
+│       ├── audio-generator/
+│       │   ├── page.tsx           # 🔄 UPDATED: 리다이렉트
+│       │   ├── create/            # 🔄 UPDATED: 단일 페이지 폼
+│       │   └── library/           # (기존 유지, 향후 제거 예정)
+│       └── art-generator/
+│           ├── page.tsx           # 🔄 UPDATED: 리다이렉트
+│           ├── create/            # 🔄 UPDATED: 단일 페이지 폼
+│           └── gallery/           # (기존 유지, 향후 제거 예정)
+├── components/
+│   └── GlobalNav.tsx              # ✨ NEW: 전역 네비게이션
+├── lib/
+│   ├── storage/
+│   │   └── indexed-db.ts          # 🔄 UPDATED: v2 스키마, tags 지원
+│   └── utils/
+│       └── tags.ts                # ✨ NEW: 태그 생성/관리 유틸리티
+```
+
+---
+
+## API 키 관리 현황
+
+### 현재 구현 상태
+- [x] 클라이언트 사이드 sessionStorage 저장
+- [x] `ApiKeySettings` 컴포넌트 (모달 UI)
+- [x] `lib/api-key/storage.ts` (암호화 없는 기본 저장)
+- [x] `lib/api-key/types.ts` (타입 정의)
+- [x] GlobalNav에서 API 키 상태 표시
+
+### 향후 보안 강화 계획 (Phase 5)
+- [ ] 디바이스 핑거프린트 기반 암호화
+- [ ] AES-256 암호화 적용
+- [ ] 키 만료 정책
+- [ ] 키 무효화 플로우
