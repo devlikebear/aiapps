@@ -1,4 +1,4 @@
-import AppHeader from '@/components/AppHeader';
+import GlobalNav from '@/components/GlobalNav';
 
 export default function AppsLayout({
   children,
@@ -7,8 +7,8 @@ export default function AppsLayout({
 }) {
   return (
     <div className="min-h-screen">
-      <AppHeader />
-      <div className="pt-16">{children}</div>
+      <GlobalNav />
+      {children}
     </div>
   );
 }
