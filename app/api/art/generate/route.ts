@@ -16,8 +16,8 @@ import {
 } from '@/lib/art/utils';
 
 // Gemini 2.5 Flash Image API 설정
-const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
-const GEMINI_IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateImages`;
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
 
 /**
  * POST /api/art/generate
@@ -72,18 +72,26 @@ export async function POST(request: NextRequest) {
     // Gemini API 호출
     const apiUrl = `${GEMINI_IMAGE_API_URL}?key=${apiKey}`;
 
+    // Gemini API 요청 형식에 맞게 변환
+    const promptText = `${body.prompt} (style: ${body.style}, quality: ${quality})`;
+
     const geminiRequest = {
-      prompt: body.prompt,
-      style: body.style,
-      resolution,
-      aspectRatio,
-      batchSize,
-      quality,
-      ...(seed && { seed }),
-      ...(body.colorPalette && { colorPalette: body.colorPalette }),
+      contents: [
+        {
+          parts: [{ text: promptText }],
+        },
+      ],
+      generationConfig: {
+        responseModalities: ['Image'],
+        ...(aspectRatio !== '1:1' && {
+          imageConfig: {
+            aspectRatio: aspectRatio,
+          },
+        }),
+      },
     };
 
-    // API 호출 (실제 구현 시 수정 필요)
+    // API 호출
     const geminiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -107,36 +115,70 @@ export async function POST(request: NextRequest) {
 
     const geminiData = await geminiResponse.json();
 
+    // Gemini API 응답에서 이미지 추출
+    // 응답 형식: { candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] } }] }
+    const candidates = geminiData.candidates || [];
+    if (candidates.length === 0) {
+      return NextResponse.json(
+        { error: 'No images generated' },
+        { status: 500 }
+      );
+    }
+
     // 응답 데이터 변환
     const images = await Promise.all(
-      (geminiData.images || []).map(
-        async (imageData: { data: string }, index: number) => {
-          // 이미지 메타데이터 추출
-          const metadata = await extractImageMetadata(imageData.data, 'png');
+      candidates
+        .slice(0, batchSize)
+        .map(
+          async (
+            candidate: {
+              content?: {
+                parts?: Array<{
+                  inlineData?: { mimeType?: string; data: string };
+                }>;
+              };
+            },
+            index: number
+          ) => {
+            const parts = candidate.content?.parts || [];
+            const imagePart = parts.find((part) => part.inlineData);
 
-          const imageMetadata: ImageMetadata = {
-            id: generateId(),
-            style: body.style,
-            format: 'png',
-            width: metadata.width,
-            height: metadata.height,
-            fileSize: metadata.fileSize,
-            aspectRatio: metadata.aspectRatio,
-            prompt: body.prompt,
-            seed: seed ? seed + index : undefined,
-            quality: quality,
-            createdAt: new Date(),
-            hasWatermark: true, // Gemini은 SynthID 워터마크 포함
-            estimatedCost: estimatedCost / batchSize,
-          };
+            if (!imagePart || !imagePart.inlineData) {
+              throw new Error('No image data in response');
+            }
 
-          return {
-            data: imageData.data,
-            format: 'png' as const,
-            metadata: imageMetadata,
-          };
-        }
-      )
+            const imageBase64 = imagePart.inlineData.data;
+            const mimeType = imagePart.inlineData.mimeType || 'image/png';
+
+            // 이미지 메타데이터 추출
+            const metadata = await extractImageMetadata(
+              `data:${mimeType};base64,${imageBase64}`,
+              'png'
+            );
+
+            const imageMetadata: ImageMetadata = {
+              id: generateId(),
+              style: body.style,
+              format: 'png',
+              width: metadata.width,
+              height: metadata.height,
+              fileSize: metadata.fileSize,
+              aspectRatio: metadata.aspectRatio,
+              prompt: body.prompt,
+              seed: seed ? seed + index : undefined,
+              quality: quality,
+              createdAt: new Date(),
+              hasWatermark: true, // Gemini은 SynthID 워터마크 포함
+              estimatedCost: estimatedCost / batchSize,
+            };
+
+            return {
+              data: imageBase64,
+              format: 'png' as const,
+              metadata: imageMetadata,
+            };
+          }
+        )
     );
 
     const response: ArtGenerateResponse = {
