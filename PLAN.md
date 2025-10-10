@@ -181,12 +181,12 @@ aiapps/
 - [ ] Vercel 배포 실행
 - [ ] 배포 후 smoke test
 
-#### 8.2 문서화
+#### 8.2 문서화 ✅
 
-- [ ] README.md 업데이트 (사용자 가이드)
-- [ ] API 문서화
-- [ ] 기여 가이드라인 (CONTRIBUTING.md)
-- [ ] 라이선스 파일 (LICENSE)
+- [x] README.md 업데이트 (사용자 가이드)
+- [x] API 문서화 (API.md)
+- [x] 기여 가이드라인 (CONTRIBUTING.md)
+- [x] 라이선스 파일 (LICENSE)
 
 #### 8.3 모니터링 및 유지보수
 
