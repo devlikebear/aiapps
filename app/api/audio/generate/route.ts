@@ -19,18 +19,25 @@ import {
 import { validateGeminiApiKeyFormat } from '@/lib/api-key/validation';
 import { handleAPIError } from '@/lib/errors/handler';
 import { ValidationError, AuthenticationError } from '@/lib/errors/types';
+import { APITimingLogger } from '@/lib/monitoring/api-timing';
 
 export async function POST(request: NextRequest) {
+  const timingLogger = new APITimingLogger();
+
   // Rate Limiting 검사
+  const endRateLimit = timingLogger.start('rateLimit', 'Rate limit check');
   const rateLimitResponse = await checkRateLimit(
     request,
     rateLimiters.generation
   );
+  endRateLimit();
+
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
 
   try {
+    const endValidation = timingLogger.start('validation', 'Input validation');
     const body = await request.json();
 
     // Zod 스키마 기반 입력 검증
@@ -58,6 +65,7 @@ export async function POST(request: NextRequest) {
         }
       );
     }
+    endValidation();
 
     // 검증된 데이터 사용
     const validatedBody = validation.data;
@@ -88,6 +96,10 @@ export async function POST(request: NextRequest) {
 
     try {
       // 오디오 생성 (스트리밍 대신 전체 생성)
+      const endGeneration = timingLogger.start(
+        'generation',
+        'AI audio generation'
+      );
       const result = await client.generate({
         prompt: enhancedPrompt,
         bpm,
@@ -97,14 +109,20 @@ export async function POST(request: NextRequest) {
         mode: body.mode || 'quality',
         duration,
       });
+      endGeneration();
 
       // PCM을 WAV로 변환
+      const endConversion = timingLogger.start(
+        'conversion',
+        'PCM to WAV conversion'
+      );
       const wavData = pcmToWav(
         result.audio.data,
         result.audio.sampleRate,
         result.audio.channels,
         result.audio.bitDepth
       );
+      endConversion();
 
       // 메타데이터 생성
       const metadata: AudioMetadata = {
@@ -126,18 +144,31 @@ export async function POST(request: NextRequest) {
       };
 
       // ArrayBuffer를 Base64로 인코딩 (전송용)
+      const endEncoding = timingLogger.start('encoding', 'Base64 encoding');
       const base64Audio = Buffer.from(wavData).toString('base64');
+      endEncoding();
 
-      return NextResponse.json({
-        success: true,
-        audioBase64: base64Audio,
-        metadata,
-      });
+      // Server-Timing 헤더 추가
+      timingLogger.log(request.nextUrl.pathname, 200);
+
+      return NextResponse.json(
+        {
+          success: true,
+          audioBase64: base64Audio,
+          metadata,
+        },
+        {
+          headers: {
+            'Server-Timing': timingLogger.getServerTimingHeader(),
+          },
+        }
+      );
     } finally {
       // 연결 정리
       client.disconnect();
     }
   } catch (error) {
+    timingLogger.log(request.nextUrl.pathname, 500);
     return handleAPIError(error);
   }
 }
