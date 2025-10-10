@@ -1,305 +1,167 @@
 /**
  * Gemini Lyria RealTime 클라이언트
+ * @google/genai SDK 사용
  */
 
-import WebSocket from 'ws';
-import { EventEmitter } from 'events';
-import {
-  SDKConfig,
-  LyriaRequest,
-  LyriaResponse,
-  LyriaStreamResponse,
-  ConnectionState,
-  NetworkError,
-  ValidationError,
-} from '../types';
-import { withRetry } from '../utils/retry';
-import { RateLimiter } from '../utils/rate-limiter';
+import { GoogleGenAI } from '@google/genai';
+import type { SDKConfig, LyriaRequest, LyriaResponse } from '../types';
 import { logger } from '../utils/logger';
 
 export interface LyriaClientConfig extends SDKConfig {
-  wsUrl?: string;
-  reconnectAttempts?: number;
-  reconnectDelay?: number;
+  model?: string;
 }
 
 const DEFAULT_CONFIG: Partial<LyriaClientConfig> = {
   timeout: 60000,
   maxRetries: 3,
-  reconnectAttempts: 5,
-  reconnectDelay: 2000,
-  wsUrl:
-    'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.StreamGenerateContent',
+  model: 'models/lyria-realtime-exp',
 };
 
-export class LyriaClient extends EventEmitter {
+export class LyriaClient {
   private config: Required<LyriaClientConfig>;
-  private ws: WebSocket | null = null;
-  private state: ConnectionState = ConnectionState.DISCONNECTED;
-  private rateLimiter: RateLimiter;
-  private requestId: string = '';
-  private audioChunks: ArrayBuffer[] = [];
+  private client: GoogleGenAI;
 
   constructor(config: LyriaClientConfig) {
-    super();
     this.config = {
       ...DEFAULT_CONFIG,
       ...config,
     } as Required<LyriaClientConfig>;
 
-    // 레이트 리미터: 분당 60회 요청
-    this.rateLimiter = new RateLimiter({
-      tokensPerInterval: 60,
-      interval: 60000,
-      maxTokens: 60,
+    this.client = new GoogleGenAI({
+      apiKey: this.config.apiKey,
+      apiVersion: 'v1alpha',
     });
   }
 
   /**
-   * 연결 상태 변경
-   */
-  private setState(newState: ConnectionState): void {
-    if (this.state !== newState) {
-      this.state = newState;
-      this.emit('stateChange', newState);
-      logger.info(`Lyria connection state changed to ${newState}`);
-    }
-  }
-
-  /**
-   * WebSocket 연결
-   */
-  private async connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.setState(ConnectionState.CONNECTING);
-
-      const wsUrl = `${this.config.wsUrl}?key=${this.config.apiKey}`;
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.on('open', () => {
-        this.setState(ConnectionState.CONNECTED);
-        logger.info('Lyria WebSocket connected');
-        resolve();
-      });
-
-      this.ws.on('message', (data: WebSocket.Data) => {
-        this.handleMessage(data);
-      });
-
-      this.ws.on('error', (error) => {
-        logger.error('Lyria WebSocket error', { error: error.message });
-        this.emit('error', new NetworkError(error.message));
-        reject(error);
-      });
-
-      this.ws.on('close', () => {
-        this.setState(ConnectionState.DISCONNECTED);
-        logger.info('Lyria WebSocket closed');
-      });
-
-      // 타임아웃 설정
-      setTimeout(() => {
-        if (this.state !== ConnectionState.CONNECTED) {
-          reject(new NetworkError('Connection timeout'));
-        }
-      }, this.config.timeout);
-    });
-  }
-
-  /**
-   * 메시지 처리
-   */
-  private handleMessage(data: WebSocket.Data): void {
-    try {
-      const message = JSON.parse(data.toString());
-
-      if (message.type === 'audio') {
-        // PCM 오디오 데이터 수신
-        const audioData = Buffer.from(message.data, 'base64');
-        this.audioChunks.push(audioData.buffer);
-
-        const streamResponse: LyriaStreamResponse = {
-          type: 'audio',
-          audio: {
-            data: audioData.buffer,
-            sampleRate: 48000,
-            channels: 2,
-            bitDepth: 16,
-          },
-          progress: message.progress,
-        };
-
-        this.emit('stream', streamResponse);
-      } else if (message.type === 'metadata') {
-        const streamResponse: LyriaStreamResponse = {
-          type: 'metadata',
-          metadata: message.metadata,
-        };
-        this.emit('stream', streamResponse);
-      } else if (message.type === 'complete') {
-        this.handleComplete();
-      } else if (message.type === 'error') {
-        this.emit('error', new Error(message.error.message));
-      }
-    } catch (error) {
-      logger.error('Failed to parse WebSocket message', { error });
-      this.emit('error', error as Error);
-    }
-  }
-
-  /**
-   * 생성 완료 처리
-   */
-  private handleComplete(): void {
-    // 모든 오디오 청크 병합
-    const totalLength = this.audioChunks.reduce(
-      (sum, chunk) => sum + chunk.byteLength,
-      0
-    );
-    const mergedAudio = new ArrayBuffer(totalLength);
-    const view = new Uint8Array(mergedAudio);
-
-    let offset = 0;
-    for (const chunk of this.audioChunks) {
-      view.set(new Uint8Array(chunk), offset);
-      offset += chunk.byteLength;
-    }
-
-    const response: LyriaResponse = {
-      audio: {
-        data: mergedAudio,
-        sampleRate: 48000,
-        channels: 2,
-        bitDepth: 16,
-      },
-      metadata: {
-        bpm: 120, // 실제 메타데이터에서 가져와야 함
-        key: 'C',
-        scale: 'major',
-        duration: mergedAudio.byteLength / (48000 * 2 * 2), // 초 단위
-      },
-      requestId: this.requestId,
-      generatedAt: new Date(),
-    };
-
-    this.emit('complete', response);
-    this.cleanup();
-  }
-
-  /**
-   * 요청 검증
-   */
-  private validateRequest(request: LyriaRequest): void {
-    if (!request.prompt || request.prompt.trim().length === 0) {
-      throw new ValidationError('Prompt is required');
-    }
-
-    if (request.bpm !== undefined && (request.bpm < 60 || request.bpm > 200)) {
-      throw new ValidationError('BPM must be between 60 and 200');
-    }
-
-    if (
-      request.density !== undefined &&
-      (request.density < 0 || request.density > 1)
-    ) {
-      throw new ValidationError('Density must be between 0 and 1');
-    }
-
-    if (
-      request.brightness !== undefined &&
-      (request.brightness < 0 || request.brightness > 1)
-    ) {
-      throw new ValidationError('Brightness must be between 0 and 1');
-    }
-  }
-
-  /**
-   * 음악 생성
+   * 음악 생성 (스트리밍)
    */
   async generate(request: LyriaRequest): Promise<LyriaResponse> {
-    // 검증
-    this.validateRequest(request);
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // 레이트 리밋 체크
-    await this.rateLimiter.acquire();
-
-    // 요청 ID 생성
-    this.requestId = `lyria_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    this.audioChunks = [];
-
-    logger.info('Starting Lyria music generation', {
-      requestId: this.requestId,
+    logger.info('Lyria generate request', {
+      requestId,
+      prompt: request.prompt,
+      bpm: request.bpm,
+      duration: request.duration,
     });
 
-    return new Promise((resolve, reject) => {
-      const initializeConnection = async () => {
-        try {
-          // WebSocket 연결
-          await withRetry(() => this.connect(), {
-            maxRetries: this.config.reconnectAttempts,
-            initialDelay: this.config.reconnectDelay,
-          });
+    try {
+      const audioChunks: ArrayBuffer[] = [];
+      let totalDuration = 0;
 
-          // complete 이벤트 리스너
-          this.once('complete', (response: LyriaResponse) => {
-            resolve(response);
-          });
+      // Lyria RealTime 세션 연결
+      const session = await this.client.live.music.connect({
+        model: this.config.model,
+        callbacks: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onmessage: (message: any) => {
+            // 오디오 청크 수신
+            if (message.serverContent?.audioChunks) {
+              for (const chunk of message.serverContent.audioChunks) {
+                const audioBuffer = Buffer.from(chunk.data, 'base64');
+                audioChunks.push(audioBuffer.buffer);
+              }
+            }
 
-          // error 이벤트 리스너
-          this.once('error', (error: Error) => {
-            this.cleanup();
-            reject(error);
-          });
+            // 메타데이터 수신
+            if (message.serverContent?.metadata) {
+              totalDuration = message.serverContent.metadata.duration || 0;
+            }
+          },
+          onerror: (error: ErrorEvent) => {
+            logger.error('Lyria session error', {
+              error: error.message || 'Unknown error',
+              requestId,
+            });
+          },
+        },
+      });
 
-          // 요청 전송
-          this.ws!.send(
-            JSON.stringify({
-              prompt: request.prompt,
-              weightedPrompts: request.weightedPrompts,
-              config: {
-                bpm: request.bpm || 120,
-                density: request.density || 0.5,
-                brightness: request.brightness || 0.5,
-                scale: request.scale || 'major',
-                guidanceLevel: request.guidanceLevel || 0.5,
-                mode: request.mode || 'quality',
-              },
-              duration: request.duration || 30,
-            })
-          );
-        } catch (error) {
-          this.cleanup();
-          reject(error);
-        }
+      // 가중치 프롬프트 설정
+      await session.setWeightedPrompts({
+        weightedPrompts: [
+          {
+            text: request.prompt,
+            weight: 1.0,
+          },
+        ],
+      });
+
+      // 음악 생성 설정
+      await session.setMusicGenerationConfig({
+        musicGenerationConfig: {
+          bpm: request.bpm || 120,
+          density: request.density ?? 0.7,
+          brightness: request.brightness ?? 0.6,
+          temperature: 1.0,
+        },
+      });
+
+      // 음악 생성 시작
+      await session.play();
+
+      // 지정된 시간만큼 생성 (duration 초)
+      await new Promise((resolve) =>
+        setTimeout(resolve, (request.duration || 30) * 1000)
+      );
+
+      // 생성 중지
+      await session.stop();
+
+      // 세션 종료
+      await session.close();
+
+      // 오디오 청크 병합
+      const totalLength = audioChunks.reduce(
+        (acc, chunk) => acc + chunk.byteLength,
+        0
+      );
+      const mergedAudio = new ArrayBuffer(totalLength);
+      const view = new Uint8Array(mergedAudio);
+      let offset = 0;
+
+      for (const chunk of audioChunks) {
+        view.set(new Uint8Array(chunk), offset);
+        offset += chunk.byteLength;
+      }
+
+      logger.info('Lyria generate success', {
+        requestId,
+        audioSize: mergedAudio.byteLength,
+        duration: totalDuration,
+      });
+
+      return {
+        requestId,
+        audio: {
+          data: mergedAudio,
+          sampleRate: 48000, // Lyria 기본값
+          channels: 2, // 스테레오
+          bitDepth: 16,
+        },
+        metadata: {
+          duration: totalDuration || request.duration || 30,
+          bpm: request.bpm || 120,
+          key: 'C', // 기본값
+          scale: request.scale || 'major',
+        },
+        generatedAt: new Date(),
       };
-
-      initializeConnection();
-    });
-  }
-
-  /**
-   * 정리
-   */
-  private cleanup(): void {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    } catch (error) {
+      logger.error('Lyria generate error', {
+        requestId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
     }
-    this.audioChunks = [];
   }
 
   /**
    * 연결 종료
    */
-  disconnect(): void {
-    this.cleanup();
-    this.setState(ConnectionState.DISCONNECTED);
-  }
-
-  /**
-   * 현재 상태 반환
-   */
-  getState(): ConnectionState {
-    return this.state;
+  async disconnect(): Promise<void> {
+    // 필요 시 정리 작업
+    logger.info('Lyria client disconnected');
   }
 }

@@ -4,6 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Node.js 런타임 사용 (WebSocket 지원)
+export const runtime = 'nodejs';
 import { LyriaClient } from '@/lib/ai';
 import type { AudioGenerateRequest, AudioMetadata } from '@/lib/audio/types';
 import { GAME_PRESETS } from '@/lib/audio/types';
@@ -110,77 +113,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// 스트리밍 버전 (Server-Sent Events)
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const prompt = searchParams.get('prompt');
-  const genre = searchParams.get('genre') as keyof typeof GAME_PRESETS;
-
-  if (!prompt || !genre) {
-    return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'GEMINI_API_KEY not configured' },
-      { status: 500 }
-    );
-  }
-
-  const preset = GAME_PRESETS[genre];
-  const enhancedPrompt = preset.promptTemplate.replace('{mood}', prompt);
-
-  // Server-Sent Events 스트림 설정
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const client = new LyriaClient({ apiKey });
-
-      try {
-        // 스트리밍 생성
-        client.on('stream', (response) => {
-          const data = `data: ${JSON.stringify(response)}\n\n`;
-          controller.enqueue(encoder.encode(data));
-        });
-
-        client.on('complete', (response) => {
-          const data = `data: ${JSON.stringify({ type: 'complete', ...response })}\n\n`;
-          controller.enqueue(encoder.encode(data));
-          controller.close();
-        });
-
-        client.on('error', (error) => {
-          const data = `data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`;
-          controller.enqueue(encoder.encode(data));
-          controller.close();
-        });
-
-        await client.generate({
-          prompt: enhancedPrompt,
-          bpm: preset.bpm.default,
-          density: preset.density,
-          brightness: preset.brightness,
-          scale: preset.scale,
-          duration: 60,
-        });
-      } catch (error) {
-        const data = `data: ${JSON.stringify({ type: 'error', message: (error as Error).message })}\n\n`;
-        controller.enqueue(encoder.encode(data));
-        controller.close();
-      } finally {
-        client.disconnect();
-      }
-    },
-  });
-
-  return new NextResponse(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
 }
