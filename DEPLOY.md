@@ -101,23 +101,19 @@ vercel --prod
    - "Settings" 탭 클릭
    - "Environment Variables" 메뉴 선택
 
-2. **필수 환경 변수 추가**
+2. **환경 변수 추가**
 
 #### Production 환경
 
 | 변수 이름 | 값 | 설명 |
 |----------|-----|------|
-| `GEMINI_API_KEY` | `AIza...` | Gemini API 키 (Google AI Studio에서 발급) |
 | `NEXT_PUBLIC_APP_URL` | `https://your-domain.vercel.app` | 프로덕션 도메인 URL |
 | `NODE_ENV` | `production` | 환경 모드 (자동 설정됨) |
 
 #### Preview 환경 (선택 사항)
 
-Preview 배포용 별도 API 키를 사용하려는 경우:
-
 | 변수 이름 | 값 | 환경 |
 |----------|-----|------|
-| `GEMINI_API_KEY` | `AIza...` | Preview |
 | `NEXT_PUBLIC_APP_URL` | `https://preview-aiapps.vercel.app` | Preview |
 
 #### Development 환경 (로컬 개발용)
@@ -126,21 +122,48 @@ Preview 배포용 별도 API 키를 사용하려는 경우:
 
 ```bash
 # .env.local (Git에 커밋되지 않음)
-GEMINI_API_KEY=AIza...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### 환경 변수 설정 화면 예시
+### Gemini API 키 관리
 
-```
-Name: GEMINI_API_KEY
-Value: AIza... (실제 API 키)
-Environment: ☑ Production ☑ Preview ☐ Development
-```
+**이 프로젝트는 서버 측 환경 변수가 아닌 클라이언트 측 localStorage를 사용합니다.**
+
+#### API 키 저장 방식
+
+1. **사용자별 API 키 관리**
+   - 각 사용자가 자신의 Gemini API 키를 직접 입력
+   - 브라우저 localStorage에 AES-256-GCM 암호화하여 저장
+   - 디바이스 지문 기반 암호화 키 생성
+
+2. **설정 페이지에서 입력**
+   - 배포 후 사용자가 `/settings` 페이지 방문
+   - "API Key Settings" 섹션에서 Gemini API 키 입력
+   - 브라우저에 안전하게 저장됨
+
+3. **보안 구현**
+
+   ```typescript
+   // lib/api-key/encryption.ts
+   // - AES-256-GCM 암호화
+   // - navigator 기반 디바이스 지문
+   // - localStorage 저장
+   ```
+
+#### API 키 발급 안내
+
+사용자에게 다음 안내 제공:
+
+1. [Google AI Studio](https://makersuite.google.com/app/apikey) 접속
+2. "Create API Key" 클릭
+3. API 키 복사
+4. 앱의 Settings 페이지(`/settings`)에서 입력
 
 **중요**:
-- `GEMINI_API_KEY`는 절대 클라이언트에 노출되지 않도록 `NEXT_PUBLIC_` 접두사 없이 설정
-- API 키는 서버 측 API Routes에서만 사용됨
+
+- 서버 측에 API 키를 저장하지 않음 (보안 강화)
+- 각 사용자가 자신의 API 키로 Gemini API 호출
+- 서버는 API 호출을 중계하지 않고, 클라이언트가 직접 호출
 
 ---
 
@@ -413,39 +436,46 @@ Value: cname.vercel-dns.com
 
 #### API 엔드포인트 테스트
 
-```bash
-# 오디오 생성 API (API 키 필요)
-curl -X POST https://your-domain.vercel.app/api/audio/generate \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{
-    "type": "bgm",
-    "genre": "rpg",
-    "prompt": "Epic battle music",
-    "duration": 30
-  }'
+**참고**: API는 클라이언트에서 직접 호출되며, 사용자가 `/settings`에서 입력한 API 키를 사용합니다.
 
-# 아트 생성 API (API 키 필요)
-curl -X POST https://your-domain.vercel.app/api/art/generate \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{
-    "style": "pixel",
-    "prompt": "Fantasy character",
-    "resolution": "512x512"
-  }'
+서버 측에서 직접 테스트하려면:
+
+```bash
+# API 상태 확인 (GET 요청)
+curl https://your-domain.vercel.app/api/audio/generate
+
+curl https://your-domain.vercel.app/api/art/generate
 ```
+
+**실제 오디오/아트 생성 테스트**:
+
+1. 브라우저에서 `/settings` 페이지 접속
+2. Gemini API 키 입력 및 저장
+3. `/apps/audio-generator` 또는 `/apps/art-generator` 페이지에서 생성 테스트
+4. 브라우저 DevTools → Network 탭에서 API 호출 확인
 
 #### 환경 변수 확인
 
 브라우저 콘솔에서:
 
 ```javascript
-// NEXT_PUBLIC_ 변수만 확인 가능
+// NEXT_PUBLIC_ 변수 확인
 console.log(process.env.NEXT_PUBLIC_APP_URL);
 ```
 
-**주의**: `GEMINI_API_KEY`는 서버 측에서만 접근 가능하며 클라이언트에 노출되지 않아야 합니다.
+#### localStorage API 키 확인
+
+브라우저 콘솔에서:
+
+```javascript
+// 암호화된 API 키 확인 (복호화 전)
+console.log(localStorage.getItem('gemini_api_key_encrypted'));
+
+// 디바이스 지문 확인
+console.log(localStorage.getItem('device_fingerprint'));
+```
+
+**주의**: API 키는 AES-256-GCM으로 암호화되어 저장되며, 디바이스 지문 없이는 복호화할 수 없습니다.
 
 ### 2. 성능 검증
 
@@ -553,32 +583,42 @@ npm run lint
 - `Type error`: TypeScript 에러 → `npm run type-check`로 수정
 - `Out of memory`: 빌드 메모리 부족 → Vercel 플랜 업그레이드
 
-#### 2. 환경 변수 인식 안 됨
+#### 2. API 키 인식 안 됨
 
-**증상**: API 호출 시 "API key not provided" 에러
+**증상**: 오디오/아트 생성 시 "API key not found" 또는 "Invalid API key" 에러
+
+**원인**:
+
+- 사용자가 Settings 페이지에서 API 키를 입력하지 않음
+- localStorage가 비워짐 (시크릿 모드, 쿠키 삭제 등)
+- 다른 디바이스에서 접속
 
 **해결**:
 
-1. **환경 변수 설정 확인**
-   - Vercel Dashboard → Settings → Environment Variables
-   - `GEMINI_API_KEY`가 올바르게 설정되었는지 확인
-   - 환경 선택 (Production, Preview, Development) 확인
+1. **API 키 재입력**
+   - `/settings` 페이지 접속
+   - "API Key Settings" 섹션에서 Gemini API 키 다시 입력
+   - "Save" 버튼 클릭
 
-2. **재배포**
-   ```bash
-   # Vercel Dashboard에서 "Redeploy" 버튼 클릭
-   # 또는 CLI로
-   vercel --prod
+2. **localStorage 확인**
+
+   브라우저 콘솔에서:
+
+   ```javascript
+   // API 키가 저장되어 있는지 확인
+   console.log(localStorage.getItem('gemini_api_key_encrypted'));
+
+   // null이면 API 키가 저장되지 않은 것
    ```
 
-3. **서버 측 환경 변수 사용 확인**
-   ```typescript
-   // ✅ 올바른 사용 (서버 측)
-   const apiKey = process.env.GEMINI_API_KEY;
+3. **API 키 유효성 검증**
+   - Settings 페이지에서 "Validate" 버튼 클릭
+   - Google AI Studio에서 API 키가 활성화되어 있는지 확인
+   - API 키 할당량이 소진되지 않았는지 확인
 
-   // ❌ 잘못된 사용 (클라이언트 노출)
-   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-   ```
+4. **시크릿 모드 문제**
+   - 시크릿 모드에서는 localStorage가 세션 종료 시 삭제됨
+   - 일반 브라우저 창에서 사용 권장
 
 #### 3. 이미지 최적화 오류
 
@@ -765,15 +805,16 @@ const inter = Inter({
 - [ ] 로컬에서 프로덕션 빌드 성공 (`npm run build`)
 - [ ] TypeScript 에러 없음 (`npm run type-check`)
 - [ ] ESLint 에러 없음 (`npm run lint`)
-- [ ] 환경 변수 설정 완료 (`GEMINI_API_KEY`)
-- [ ] Gemini API 키 유효성 확인
+- [ ] 환경 변수 설정 완료 (`NEXT_PUBLIC_APP_URL`)
 - [ ] `.env.local` 파일이 `.gitignore`에 포함됨
 - [ ] Vercel 프로젝트 생성 완료
 - [ ] GitHub 저장소 연결 완료
 - [ ] 첫 배포 성공 확인
 - [ ] Speed Insights 활성화 확인
 - [ ] Analytics 활성화 확인
-- [ ] API 엔드포인트 테스트 완료
+- [ ] Settings 페이지에서 Gemini API 키 입력 및 저장
+- [ ] 오디오 생성 테스트 완료
+- [ ] 아트 생성 테스트 완료
 - [ ] Core Web Vitals 점수 확인
 - [ ] 보안 헤더 확인
 - [ ] SSL 인증서 발급 확인
