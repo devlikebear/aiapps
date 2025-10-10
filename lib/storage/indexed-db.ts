@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'aiapps-media-library';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 태그 시스템 추가를 위한 버전 업그레이드
 const AUDIO_STORE = 'audio';
 const IMAGE_STORE = 'images';
 
@@ -23,20 +23,69 @@ function openDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      const oldVersion = event.oldVersion;
 
-      // 오디오 스토어 생성
+      // 오디오 스토어 생성 또는 업그레이드
+      let audioStore: IDBObjectStore;
       if (!db.objectStoreNames.contains(AUDIO_STORE)) {
-        const audioStore = db.createObjectStore(AUDIO_STORE, { keyPath: 'id' });
-        audioStore.createIndex('createdAt', 'createdAt', { unique: false });
-        audioStore.createIndex('genre', 'metadata.genre', { unique: false });
-        audioStore.createIndex('type', 'metadata.type', { unique: false });
+        audioStore = db.createObjectStore(AUDIO_STORE, { keyPath: 'id' });
+      } else {
+        audioStore = (
+          event.target as IDBOpenDBRequest
+        ).transaction!.objectStore(AUDIO_STORE);
       }
 
-      // 이미지 스토어 생성
+      // 기본 인덱스 생성 (버전 1)
+      if (oldVersion < 1) {
+        if (!audioStore.indexNames.contains('createdAt')) {
+          audioStore.createIndex('createdAt', 'createdAt', { unique: false });
+        }
+        if (!audioStore.indexNames.contains('genre')) {
+          audioStore.createIndex('genre', 'metadata.genre', { unique: false });
+        }
+        if (!audioStore.indexNames.contains('type')) {
+          audioStore.createIndex('type', 'metadata.type', { unique: false });
+        }
+      }
+
+      // 태그 인덱스 추가 (버전 2)
+      if (oldVersion < 2) {
+        if (!audioStore.indexNames.contains('tags')) {
+          audioStore.createIndex('tags', 'tags', {
+            unique: false,
+            multiEntry: true,
+          });
+        }
+      }
+
+      // 이미지 스토어 생성 또는 업그레이드
+      let imageStore: IDBObjectStore;
       if (!db.objectStoreNames.contains(IMAGE_STORE)) {
-        const imageStore = db.createObjectStore(IMAGE_STORE, { keyPath: 'id' });
-        imageStore.createIndex('createdAt', 'createdAt', { unique: false });
-        imageStore.createIndex('style', 'metadata.style', { unique: false });
+        imageStore = db.createObjectStore(IMAGE_STORE, { keyPath: 'id' });
+      } else {
+        imageStore = (
+          event.target as IDBOpenDBRequest
+        ).transaction!.objectStore(IMAGE_STORE);
+      }
+
+      // 기본 인덱스 생성 (버전 1)
+      if (oldVersion < 1) {
+        if (!imageStore.indexNames.contains('createdAt')) {
+          imageStore.createIndex('createdAt', 'createdAt', { unique: false });
+        }
+        if (!imageStore.indexNames.contains('style')) {
+          imageStore.createIndex('style', 'metadata.style', { unique: false });
+        }
+      }
+
+      // 태그 인덱스 추가 (버전 2)
+      if (oldVersion < 2) {
+        if (!imageStore.indexNames.contains('tags')) {
+          imageStore.createIndex('tags', 'tags', {
+            unique: false,
+            multiEntry: true,
+          });
+        }
       }
     };
   });
@@ -49,6 +98,7 @@ export async function saveAudio(audio: {
   data: string; // base64
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: any;
+  tags?: string[]; // 태그 배열 (옵션)
 }): Promise<void> {
   const db = await openDB();
   const transaction = db.transaction([AUDIO_STORE], 'readwrite');
@@ -58,6 +108,7 @@ export async function saveAudio(audio: {
     id: audio.id,
     data: audio.data,
     metadata: audio.metadata,
+    tags: audio.tags || [],
     createdAt: new Date(),
   };
 
@@ -75,6 +126,7 @@ export async function saveImage(image: {
   data: string; // base64
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: any;
+  tags?: string[]; // 태그 배열 (옵션)
 }): Promise<void> {
   const db = await openDB();
   const transaction = db.transaction([IMAGE_STORE], 'readwrite');
@@ -84,6 +136,7 @@ export async function saveImage(image: {
     id: image.id,
     data: image.data,
     metadata: image.metadata,
+    tags: image.tags || [],
     createdAt: new Date(),
   };
 
@@ -101,6 +154,7 @@ export async function getAllAudio(): Promise<
     data: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metadata: any;
+    tags: string[];
     createdAt: Date;
   }>
 > {
@@ -110,7 +164,14 @@ export async function getAllAudio(): Promise<
 
   return new Promise((resolve, reject) => {
     const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      // 기존 데이터와의 호환성을 위해 tags가 없으면 빈 배열로 설정
+      const result = request.result.map((item) => ({
+        ...item,
+        tags: item.tags || [],
+      }));
+      resolve(result);
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -122,6 +183,7 @@ export async function getAllImages(): Promise<
     data: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metadata: any;
+    tags: string[];
     createdAt: Date;
   }>
 > {
@@ -131,7 +193,14 @@ export async function getAllImages(): Promise<
 
   return new Promise((resolve, reject) => {
     const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      // 기존 데이터와의 호환성을 위해 tags가 없으면 빈 배열로 설정
+      const result = request.result.map((item) => ({
+        ...item,
+        tags: item.tags || [],
+      }));
+      resolve(result);
+    };
     request.onerror = () => reject(request.error);
   });
 }
