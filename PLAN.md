@@ -956,18 +956,52 @@ const CostDashboard = () => {
    - **Audio**: type, genre, tempo (BPM), duration
    - **Image**: style, resolution, quality, aspect ratio
 
-### 남은 작업 (Phase 3.6 예정)
-- [ ] 라이브러리 페이지 태그 필터링 UI
-- [ ] 태그 클릭으로 필터링 기능
-- [ ] 생성 페이지에 유사 미디어 실시간 표시
-- [ ] 현재 옵션과 동일한 태그를 가진 미디어 표시
+### 완료된 추가 작업 (Phase 3.6) ✅
+
+1. **라이브러리 페이지 태그 필터링**
+   - [x] 태그 필터 섹션 UI 구현
+   - [x] 태그 선택/해제 토글 기능
+   - [x] 선택된 태그 개수 표시
+   - [x] "모두 지우기" 버튼
+   - [x] OR 조건 필터링 (선택된 태그 중 하나라도 일치)
+   - [x] 검색과 태그 필터 AND 조건 결합
+
+2. **생성 페이지 관련 미디어 표시**
+   - [x] 오디오 생성기: 설정 기반 관련 오디오 자동 표시
+     - 타입, 장르, BPM, duration 변경 시 실시간 업데이트
+     - 재생/정지 컨트롤
+     - WAV 다운로드 기능
+     - 최대 6개 최신순 표시
+   - [x] 아트 생성기: 설정 기반 관련 이미지 자동 표시
+     - 스타일, 해상도, 품질 변경 시 실시간 업데이트
+     - 썸네일 그리드 및 호버 효과
+     - 이미지 상세 모달 (전체 메타데이터)
+     - PNG/JPG 다운로드 기능
+     - 최대 6개 최신순 표시
+
+3. **배경 작업 큐 시스템 (Job Queue)**
+   - [x] `lib/queue/` 디렉토리 구조 구현
+   - [x] localStorage 기반 작업 큐 관리
+   - [x] JobQueue 클래스 (FIFO 큐, 상태 관리)
+   - [x] JobProcessor 클래스 (백그라운드 실행)
+   - [x] 작업 타입: 오디오 생성, 이미지 생성
+   - [x] 작업 상태: pending, processing, completed, failed
+   - [x] 자동 재시도 로직 (최대 3회)
+   - [x] Toast 알림 통합 (시작, 완료, 실패)
+   - [x] JobToast 컴포넌트 (진행 상태 표시)
+   - [x] 생성 페이지 큐 통합
+   - [x] API 키 보안 처리 (localStorage 암호화, sessionStorage 캐싱)
 
 ### 완료 기준
+
 - [x] GlobalNav 모든 페이지에서 정상 작동
 - [x] 오디오/아트 생성기 단일 페이지로 단순화
 - [x] 통합 라이브러리 페이지 정상 작동
 - [x] 태그 시스템 IndexedDB 통합
 - [x] 태그 자동 생성 유틸리티 구현
+- [x] 태그 필터링 UI 구현 (Phase 3.6)
+- [x] 생성 페이지 관련 미디어 표시 (Phase 3.6)
+- [x] 배경 작업 큐 시스템 구현 (Phase 3.6)
 - [x] TypeScript strict mode 통과
 - [x] Build 성공
 
@@ -982,27 +1016,34 @@ const CostDashboard = () => {
 | Phase 2 | 앱 1 - 오디오 생성기 | 5-7일 | ✅ 완료 (Gemini API 연동 대기) |
 | Phase 3 | 앱 2 - 아트 생성기 | 5-7일 | ✅ 완료 (Gemini API 연동 대기) |
 | **Phase 3.5** | **UX 개선 & 통합 라이브러리** | **2-3일** | **✅ 완료** |
+| **Phase 3.6** | **태그 필터링 & 배경 작업 큐** | **2일** | **✅ 완료** |
 | Phase 4 | 공통 UI 키트 | 2-3일 | 📋 계획 중 |
 | Phase 5 | 보안/관측 가능성 | 2-3일 | 📋 계획 중 |
 | Phase 6 | 배포 및 프로덕션 | 2-3일 | 📋 계획 중 |
 | Phase 7 | 테스트/버그 수정 | 1-2일 | 📋 계획 중 |
 | Phase 8 | 론칭 및 모니터링 | 진행 중 | 📋 계획 중 |
 
-**현재 진행 상황**: Phase 3.5 완료, Phase 3.6 또는 Phase 4 준비 중
+**현재 진행 상황**: Phase 3.6 완료, Phase 4 준비 중
 
-**주요 완료 항목 (Phase 3.5 추가)**:
+**주요 완료 항목 (Phase 3.5-3.6)**:
 - ✅ Global Navigation Bar 구현
 - ✅ 오디오/아트 생성기 UI 단순화 (4단계 → 1단계, 3단계 → 1단계)
 - ✅ 통합 라이브러리 페이지 (`/library`)
 - ✅ IndexedDB 태그 시스템 구현
 - ✅ 태그 자동 생성 유틸리티
 - ✅ 검색 기능 구현
+- ✅ 태그 필터링 UI (Phase 3.6)
+- ✅ 생성 페이지 관련 미디어 표시 (Phase 3.6)
+- ✅ 배경 작업 큐 시스템 (Phase 3.6)
+- ✅ API 키 암호화 저장 (Phase 3.6)
 
-**다음 단계**: Phase 3.6 (태그 필터링 UI 및 유사 미디어 표시) 또는 Phase 4 시작
+**다음 단계**: Phase 4 (공통 UI 키트 및 품질 개선) 또는 Gemini API 실제 연동
 
 ---
 
-## 커밋 히스토리 (Phase 3.5)
+## 커밋 히스토리 (Phase 3.5-3.6)
+
+### Phase 3.5
 
 1. **feat(storage): implement IndexedDB persistence for generated media**
    - IndexedDB 기본 구조 및 저장 함수 구현
@@ -1025,6 +1066,29 @@ const CostDashboard = () => {
 7. **feat(tags): implement tag system for media indexing**
    - 태그 시스템 전체 구현
 
+### Phase 3.6
+
+1. **feat(library): add tag filtering system for media**
+   - 태그 필터링 UI 구현
+
+2. **feat(queue): integrate background job queue with generation pages**
+   - 배경 작업 큐 시스템 구현 및 통합
+
+3. **fix(lint): migrate from next lint to ESLint CLI**
+   - ESLint 9 호환성 문제 해결
+
+4. **fix(queue): fix API key retrieval and toast duplicate key issues**
+   - API 키 저장소 통합 및 Toast ID 중복 수정
+
+5. **fix(queue): fix image generation API response handling**
+   - 이미지 배치 생성 응답 구조 수정
+
+6. **feat(generators): add related media display to audio and art generator pages**
+   - 생성 페이지에 관련 미디어 표시 기능 추가
+
+7. **fix(generators): fix related media not updating when settings change**
+   - useEffect 의존성 배열 수정
+
 ---
 
 ## 프로젝트 구조 변경사항
@@ -1033,39 +1097,56 @@ const CostDashboard = () => {
 aiapps/
 ├── app/
 │   ├── library/                    # ✨ NEW: 통합 라이브러리 페이지
-│   │   └── page.tsx
+│   │   └── page.tsx               # 🔄 UPDATED: 태그 필터링 UI 추가
 │   └── apps/
-│       ├── layout.tsx              # 🔄 UPDATED: GlobalNav 적용
+│       ├── layout.tsx              # 🔄 UPDATED: GlobalNav + JobToast 적용
 │       ├── audio-generator/
 │       │   ├── page.tsx           # 🔄 UPDATED: 리다이렉트
-│       │   ├── create/            # 🔄 UPDATED: 단일 페이지 폼
+│       │   ├── create/            # 🔄 UPDATED: 큐 통합 + 관련 미디어 표시
 │       │   └── library/           # (기존 유지, 향후 제거 예정)
 │       └── art-generator/
 │           ├── page.tsx           # 🔄 UPDATED: 리다이렉트
-│           ├── create/            # 🔄 UPDATED: 단일 페이지 폼
+│           ├── create/            # 🔄 UPDATED: 큐 통합 + 관련 미디어 표시
 │           └── gallery/           # (기존 유지, 향후 제거 예정)
 ├── components/
-│   └── GlobalNav.tsx              # ✨ NEW: 전역 네비게이션
+│   ├── GlobalNav.tsx              # ✨ NEW: 전역 네비게이션
+│   ├── ApiKeySettings.tsx         # ✨ NEW: API 키 설정 모달
+│   └── JobToast.tsx               # ✨ NEW: 작업 상태 토스트
 ├── lib/
 │   ├── storage/
 │   │   └── indexed-db.ts          # 🔄 UPDATED: v2 스키마, tags 지원
-│   └── utils/
-│       └── tags.ts                # ✨ NEW: 태그 생성/관리 유틸리티
+│   ├── utils/
+│   │   └── tags.ts                # ✨ NEW: 태그 생성/관리 유틸리티
+│   ├── queue/                      # ✨ NEW: 배경 작업 큐 시스템
+│   │   ├── index.ts               # JobQueue 클래스
+│   │   ├── job-processor.ts       # JobProcessor 클래스
+│   │   └── types.ts               # 작업 타입 정의
+│   └── api-key/                    # ✨ NEW: API 키 관리
+│       ├── storage.ts             # 암호화 저장 + 세션 캐싱
+│       ├── encryption.ts          # AES-256 암호화
+│       └── types.ts               # API 키 타입 정의
 ```
 
 ---
 
 ## API 키 관리 현황
 
-### 현재 구현 상태
-- [x] 클라이언트 사이드 sessionStorage 저장
+### 현재 구현 상태 (Phase 3.6 완료)
+
+- [x] 클라이언트 사이드 암호화 저장 (localStorage)
+- [x] AES-256 암호화 적용
+- [x] 디바이스 핑거프린트 기반 암호화 키 생성
+- [x] sessionStorage 캐싱 (브라우저 세션 동안 평문 보관)
 - [x] `ApiKeySettings` 컴포넌트 (모달 UI)
-- [x] `lib/api-key/storage.ts` (암호화 없는 기본 저장)
+- [x] `lib/api-key/storage.ts` (암호화 저장 + 캐싱)
+- [x] `lib/api-key/encryption.ts` (암호화 유틸리티)
 - [x] `lib/api-key/types.ts` (타입 정의)
 - [x] GlobalNav에서 API 키 상태 표시
+- [x] JobProcessor에서 안전한 API 키 사용
 
 ### 향후 보안 강화 계획 (Phase 5)
-- [ ] 디바이스 핑거프린트 기반 암호화
-- [ ] AES-256 암호화 적용
-- [ ] 키 만료 정책
-- [ ] 키 무효화 플로우
+
+- [ ] 키 만료 정책 (30일)
+- [ ] 키 무효화 및 재발급 플로우
+- [ ] 보안 감사 로그
+- [ ] 키 로테이션 알림
