@@ -27,6 +27,7 @@ interface StoredAudio {
     createdAt: string;
     [key: string]: unknown;
   };
+  tags: string[];
   createdAt: Date;
   blobUrl?: string;
 }
@@ -40,6 +41,7 @@ interface StoredImage {
     createdAt: string;
     [key: string]: unknown;
   };
+  tags: string[];
   createdAt: Date;
   blobUrl?: string;
 }
@@ -52,6 +54,10 @@ export default function LibraryPage() {
   const [imageList, setImageList] = useState<StoredImage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Tag filter state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   // Audio player state
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);
@@ -89,6 +95,13 @@ export default function LibraryPage() {
 
       setAudioList(audioWithBlobs);
       setImageList(imagesWithBlobs);
+
+      // 모든 태그 수집 (중복 제거)
+      const allTags = new Set<string>();
+      [...audioWithBlobs, ...imagesWithBlobs].forEach((item) => {
+        item.tags?.forEach((tag) => allTags.add(tag));
+      });
+      setAvailableTags(Array.from(allTags).sort());
     } catch (error) {
       console.error('Failed to load media:', error);
     } finally {
@@ -160,14 +173,38 @@ export default function LibraryPage() {
     }
   };
 
-  // Filter media based on search query
-  const filteredAudio = audioList.filter((audio) =>
-    audio.metadata.prompt.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Toggle tag selection
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
 
-  const filteredImages = imageList.filter((image) =>
-    image.metadata.prompt.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Clear all tag filters
+  const clearTagFilters = () => {
+    setSelectedTags([]);
+  };
+
+  // Filter media based on search query and tags
+  const filteredAudio = audioList.filter((audio) => {
+    const matchesSearch = audio.metadata.prompt
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesTags =
+      selectedTags.length === 0 ||
+      selectedTags.some((tag) => audio.tags?.includes(tag));
+    return matchesSearch && matchesTags;
+  });
+
+  const filteredImages = imageList.filter((image) => {
+    const matchesSearch = image.metadata.prompt
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesTags =
+      selectedTags.length === 0 ||
+      selectedTags.some((tag) => image.tags?.includes(tag));
+    return matchesSearch && matchesTags;
+  });
 
   // Stats
   const totalAudio = audioList.length;
@@ -280,6 +317,46 @@ export default function LibraryPage() {
             </div>
           </div>
         </div>
+
+        {/* Tag Filters */}
+        {availableTags.length > 0 && (
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-purple-400" />
+                <h3 className="font-medium text-white">태그 필터</h3>
+                {selectedTags.length > 0 && (
+                  <span className="text-sm text-gray-400">
+                    ({selectedTags.length}개 선택됨)
+                  </span>
+                )}
+              </div>
+              {selectedTags.length > 0 && (
+                <button
+                  onClick={clearTagFilters}
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  모두 지우기
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    selectedTags.includes(tag)
+                      ? 'bg-purple-600 text-white ring-2 ring-purple-400'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         {isLoading ? (
