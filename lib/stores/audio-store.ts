@@ -122,7 +122,10 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
       blobUrl: audioUrl,
       data: base64,
       metadata,
-    }).catch((err) => console.error('Failed to save audio to IndexedDB:', err));
+    }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save audio to IndexedDB:', err);
+    });
 
     set({
       currentAudio: generatedAudio,

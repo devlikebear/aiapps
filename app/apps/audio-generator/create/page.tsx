@@ -64,20 +64,10 @@ export default function AudioCreatePage() {
           duration,
         });
 
-        console.log('Current settings:', {
-          type,
-          genre,
-          bpm: currentBpm,
-          duration,
-        });
-        console.log('Generated tags:', currentTags);
-
         // 태그가 일치하는 오디오 필터링
         const filtered = allAudio.filter((audio) =>
           currentTags.some((tag) => audio.tags?.includes(tag))
         );
-
-        console.log(`Found ${filtered.length} related audio files`);
 
         // 최신순 정렬
         filtered.sort((a, b) => {
@@ -90,6 +80,7 @@ export default function AudioCreatePage() {
 
         setRelatedAudio(filtered.slice(0, 6)); // 최대 6개만 표시
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to load related audio:', error);
       }
     };

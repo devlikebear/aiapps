@@ -76,6 +76,7 @@ function AudioPlayer() {
 
     if (isPlaying) {
       audio.play().catch((error) => {
+        // eslint-disable-next-line no-console
         console.error('Audio play error:', error);
         pause();
       });

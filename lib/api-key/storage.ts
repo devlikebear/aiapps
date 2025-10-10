@@ -58,6 +58,7 @@ export function loadApiKeySettings(): ApiKeySettings | null {
       ),
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load API key settings:', error);
     return null;
   }
@@ -74,6 +75,7 @@ export function saveApiKeySettings(settings: ApiKeySettings): void {
     const encoded = simpleEncode(json);
     localStorage.setItem(API_KEY_STORAGE_KEY, encoded);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to save API key settings:', error);
     throw error;
   }
@@ -122,6 +124,7 @@ export function loadApiKey(provider: ApiProvider): string | null {
 
     return key;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load API key:', error);
     return null;
   }
@@ -166,6 +169,7 @@ export function cacheApiKeyInSession(provider: ApiProvider, key: string): void {
   try {
     sessionStorage.setItem(`${SESSION_KEY_PREFIX}${provider}`, key);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to cache API key in session:', error);
   }
 }
@@ -175,6 +179,7 @@ export function getApiKeyFromSession(provider: ApiProvider): string | null {
   try {
     return sessionStorage.getItem(`${SESSION_KEY_PREFIX}${provider}`);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to get API key from session:', error);
     return null;
   }
@@ -189,6 +194,7 @@ export function clearSessionCache(): void {
       }
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to clear session cache:', error);
   }
 }

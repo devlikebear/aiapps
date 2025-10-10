@@ -92,6 +92,7 @@ export const useArtStore = create<ArtState>((set, get) => ({
         data: img.data,
         metadata: img.metadata,
       }).catch((err) =>
+        // eslint-disable-next-line no-console
         console.error('Failed to save image to IndexedDB:', err)
       );
     });

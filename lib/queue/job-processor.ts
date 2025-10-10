@@ -30,6 +30,7 @@ export class JobProcessor {
     this.isRunning = true;
     this.poll();
 
+    // eslint-disable-next-line no-console
     console.log('[JobProcessor] Started');
   }
 
@@ -46,6 +47,7 @@ export class JobProcessor {
       this.pollTimer = null;
     }
 
+    // eslint-disable-next-line no-console
     console.log('[JobProcessor] Stopped');
   }
 
@@ -100,6 +102,7 @@ export class JobProcessor {
         startedAt: Date.now(),
       });
 
+      // eslint-disable-next-line no-console
       console.log(`[JobProcessor] Processing job: ${job.id} (${job.type})`);
 
       // 타입별 처리
@@ -109,6 +112,7 @@ export class JobProcessor {
         await this.processImageJob(job as ImageJob);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`[JobProcessor] Job failed: ${job.id}`, error);
 
       // 실패 처리
@@ -167,6 +171,7 @@ export class JobProcessor {
     // IndexedDB에 저장
     await this.saveAudioToIndexedDB(job, result);
 
+    // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Audio job completed: ${job.id}`);
   }
 
@@ -219,6 +224,7 @@ export class JobProcessor {
     // IndexedDB에 저장
     await this.saveImagesToIndexedDB(job, images);
 
+    // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Image job completed: ${job.id}`);
   }
 

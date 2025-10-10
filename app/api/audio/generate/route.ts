@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
       client.disconnect();
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Audio generation error:', error);
     return NextResponse.json(
       {
