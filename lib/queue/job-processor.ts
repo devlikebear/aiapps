@@ -175,43 +175,38 @@ export class JobProcessor {
    */
   private async processImageJob(job: ImageJob): Promise<void> {
     const batchSize = job.params.batchSize || 1;
-    const images: Array<{ data: string; metadata: Record<string, unknown> }> =
-      [];
 
-    // 배치 생성
-    for (let i = 0; i < batchSize; i++) {
-      // 진행률 업데이트
-      jobQueue.updateJob(job.id, {
-        progress: Math.round(((i + 1) / batchSize) * 100),
-      });
+    // API 요청 (batchSize는 API에서 한 번에 처리)
+    const response = await this.fetchWithTimeout('/api/art/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': getApiKey('gemini') || '',
+      },
+      body: JSON.stringify({
+        prompt: job.params.prompt,
+        style: job.params.style,
+        resolution: job.params.resolution,
+        quality: job.params.quality,
+        batchSize: batchSize,
+        seed: job.params.seed,
+      }),
+    });
 
-      // API 요청
-      const response = await this.fetchWithTimeout('/api/art/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': getApiKey('gemini') || '',
-        },
-        body: JSON.stringify({
-          prompt: job.params.prompt,
-          style: job.params.style,
-          resolution: job.params.resolution,
-          quality: job.params.quality,
-          seed: job.params.seed ? job.params.seed + i : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Image generation failed');
-      }
-
-      const result = await response.json();
-      images.push({
-        data: result.imageBase64,
-        metadata: result.metadata,
-      });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Image generation failed');
     }
+
+    const result = await response.json();
+
+    // API 응답 형식: { images: [{ data: string, metadata: {...} }] }
+    const images = result.images.map(
+      (img: { data: string; metadata: Record<string, unknown> }) => ({
+        data: img.data,
+        metadata: img.metadata,
+      })
+    );
 
     // 작업 결과 업데이트
     jobQueue.updateJob(job.id, {
