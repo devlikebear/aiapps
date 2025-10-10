@@ -16,9 +16,8 @@ import {
 } from '@/lib/art/utils';
 
 // Gemini 2.5 Flash Image API 설정
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_IMAGE_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generate';
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
+const GEMINI_IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateImages`;
 
 /**
  * POST /api/art/generate
@@ -37,14 +36,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // API 키 확인
-    if (!GEMINI_API_KEY) {
+    // API 키를 헤더에서 가져오기
+    const apiKey = request.headers.get('X-API-Key');
+    if (!apiKey) {
       return NextResponse.json(
         {
-          error:
-            'Gemini API key not configured. Please set GEMINI_API_KEY environment variable.',
+          error: 'API key not provided. Please set your Gemini API key.',
         },
-        { status: 500 }
+        { status: 401 }
       );
     }
 
@@ -71,9 +70,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Gemini API 호출
-    // 주의: 실제 Gemini Image API는 아직 공개되지 않았을 수 있습니다
-    // 이 코드는 가상의 API 구조를 기반으로 작성되었습니다
-    const apiUrl = `${GEMINI_IMAGE_API_URL}?key=${GEMINI_API_KEY}`;
+    const apiUrl = `${GEMINI_IMAGE_API_URL}?key=${apiKey}`;
 
     const geminiRequest = {
       prompt: body.prompt,
@@ -169,6 +166,6 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     message: 'Art Generator API is running',
-    apiKeyConfigured: !!GEMINI_API_KEY,
+    model: GEMINI_IMAGE_MODEL,
   });
 }
