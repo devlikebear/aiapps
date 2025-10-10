@@ -46,6 +46,37 @@ export type ImageFormat = 'png' | 'jpeg' | 'webp';
 export type QualityPreset = 'draft' | 'standard' | 'high';
 
 /**
+ * 사용 목적 타입
+ */
+export type UsageType = 'game' | 'web' | 'general';
+
+/**
+ * 사용 목적별 프리셋
+ */
+export interface UsageTypePreset {
+  type: UsageType;
+  name: string;
+  description: string;
+  icon: string;
+  defaults: {
+    format: ImageFormat;
+    resolution: ResolutionPreset;
+    aspectRatio: AspectRatio;
+    quality: QualityPreset;
+    colorProfile: 'sRGB' | 'Adobe RGB';
+  };
+  optimizations: {
+    transparency?: boolean;
+    tileability?: boolean;
+    spriteReady?: boolean;
+    fileSize?: 'optimized' | 'standard';
+    responsive?: boolean;
+    retina?: boolean;
+  };
+  availableStyles: ArtStyle[];
+}
+
+/**
  * 아트 스타일 프리셋
  */
 export interface ArtStylePreset {
@@ -404,5 +435,75 @@ export const QUALITY_PRESETS: Record<
     description: '최고 품질 출력',
     estimatedTime: '20-40초',
     costMultiplier: 2.0,
+  },
+};
+
+/**
+ * 사용 목적별 프리셋 목록
+ */
+export const USAGE_TYPE_PRESETS: Record<UsageType, UsageTypePreset> = {
+  game: {
+    type: 'game',
+    name: '게임 에셋',
+    description: '게임 개발에 최적화된 설정',
+    icon: '🎮',
+    defaults: {
+      format: 'png',
+      resolution: '512x512',
+      aspectRatio: '1:1',
+      quality: 'high',
+      colorProfile: 'sRGB',
+    },
+    optimizations: {
+      transparency: true,
+      tileability: true,
+      spriteReady: true,
+    },
+    availableStyles: [
+      'pixel-art',
+      'character-design',
+      'environment',
+      'ui-icons',
+    ],
+  },
+  web: {
+    type: 'web',
+    name: '웹 콘텐츠',
+    description: '웹사이트/앱 UI에 최적화된 설정',
+    icon: '🌐',
+    defaults: {
+      format: 'webp',
+      resolution: '1920x1080',
+      aspectRatio: '16:9',
+      quality: 'standard',
+      colorProfile: 'sRGB',
+    },
+    optimizations: {
+      fileSize: 'optimized',
+      responsive: true,
+      retina: true,
+    },
+    availableStyles: ['concept-art', 'character-design', 'ui-icons'],
+  },
+  general: {
+    type: 'general',
+    name: '일반 용도',
+    description: '자유로운 창작을 위한 기본 설정',
+    icon: '🎨',
+    defaults: {
+      format: 'png',
+      resolution: '1024x1024',
+      aspectRatio: '1:1',
+      quality: 'standard',
+      colorProfile: 'sRGB',
+    },
+    optimizations: {},
+    availableStyles: [
+      'pixel-art',
+      'concept-art',
+      'character-design',
+      'environment',
+      'ui-icons',
+    ],
   },
 };

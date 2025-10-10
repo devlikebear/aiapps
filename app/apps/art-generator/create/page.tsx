@@ -6,9 +6,12 @@ import { Download, Trash2, Eye } from 'lucide-react';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
+  USAGE_TYPE_PRESETS,
   type ArtStyle,
   type QualityPreset,
+  type UsageType,
 } from '@/lib/art/types';
+import { UsageTypeSelector } from '@/components/art/UsageTypeSelector';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
@@ -55,6 +58,7 @@ export default function ArtCreatePage() {
   const { error, generatedImages, setError, removeImage } = useArtStore();
 
   // Form state
+  const [usageType, setUsageType] = useState<UsageType>('game');
   const [style, setStyle] = useState<ArtStyle>('pixel-art');
   const [prompt, setPrompt] = useState('');
   const [resolution, setResolution] = useState('512x512');
@@ -68,6 +72,19 @@ export default function ArtCreatePage() {
 
   const stylePreset = ART_STYLE_PRESETS[style];
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
+
+  // UsageType 변경 시 기본값 자동 설정
+  useEffect(() => {
+    const preset = USAGE_TYPE_PRESETS[usageType];
+    setResolution(preset.defaults.resolution);
+    setQuality(preset.defaults.quality);
+
+    // 스타일이 현재 UsageType의 사용 가능한 스타일 목록에 없으면 첫 번째 스타일로 변경
+    if (!preset.availableStyles.includes(style)) {
+      setStyle(preset.availableStyles[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usageType]); // style은 의존성에서 제외 (무한 루프 방지)
 
   // 관련 이미지 로드 및 필터링
   useEffect(() => {
@@ -191,6 +208,9 @@ export default function ArtCreatePage() {
 
         {/* Generation Form */}
         <div className="app-card p-6 md:p-8 space-y-6">
+          {/* Usage Type Selection */}
+          <UsageTypeSelector value={usageType} onChange={setUsageType} />
+
           {/* Style Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -201,11 +221,17 @@ export default function ArtCreatePage() {
               onChange={(e) => setStyle(e.target.value as ArtStyle)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              {Object.entries(ART_STYLE_PRESETS).map(([key, preset]) => (
-                <option key={key} value={key}>
-                  {preset.icon} {preset.name}
-                </option>
-              ))}
+              {Object.entries(ART_STYLE_PRESETS)
+                .filter(([key]) =>
+                  USAGE_TYPE_PRESETS[usageType].availableStyles.includes(
+                    key as ArtStyle
+                  )
+                )
+                .map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.icon} {preset.name}
+                  </option>
+                ))}
             </select>
             <p className="mt-2 text-xs text-gray-500">
               {stylePreset.description}
