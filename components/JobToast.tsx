@@ -26,7 +26,7 @@ export default function JobToast() {
       setToasts((prev) => [
         ...prev,
         {
-          id: event.jobId,
+          id: `${event.jobId}-completed-${Date.now()}`,
           type: 'success',
           icon: isAudio ? (
             <Music className="w-5 h-5" />
@@ -50,7 +50,7 @@ export default function JobToast() {
       setToasts((prev) => [
         ...prev,
         {
-          id: event.jobId,
+          id: `${event.jobId}-failed-${Date.now()}`,
           type: 'error',
           icon: isAudio ? (
             <Music className="w-5 h-5" />
@@ -72,7 +72,7 @@ export default function JobToast() {
       setToasts((prev) => [
         ...prev,
         {
-          id: event.jobId,
+          id: `${event.jobId}-started-${Date.now()}`,
           type: 'info',
           icon: isAudio ? (
             <Music className="w-5 h-5" />

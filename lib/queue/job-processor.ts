@@ -7,6 +7,7 @@ import { jobQueue } from './job-queue';
 import type { Job, AudioJob, ImageJob } from './types';
 import { saveAudio, saveImage } from '@/lib/storage/indexed-db';
 import { generateAudioTags, generateImageTags } from '@/lib/utils/tags';
+import { getApiKey } from '@/lib/api-key/storage';
 
 const POLL_INTERVAL = 5000; // 5초마다 폴링
 const MAX_CONCURRENT_JOBS = 2; // 동시 처리 최대 작업 수
@@ -131,7 +132,7 @@ export class JobProcessor {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': this.getApiKey('gemini') || '',
+        'X-API-Key': getApiKey('gemini') || '',
       },
       body: JSON.stringify({
         prompt: job.params.prompt,
@@ -189,7 +190,7 @@ export class JobProcessor {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': this.getApiKey('gemini') || '',
+          'X-API-Key': getApiKey('gemini') || '',
         },
         body: JSON.stringify({
           prompt: job.params.prompt,
@@ -291,23 +292,6 @@ export class JobProcessor {
         },
         tags,
       });
-    }
-  }
-
-  /**
-   * API 키 가져오기
-   */
-  private getApiKey(provider: string): string | null {
-    if (typeof window === 'undefined') return null;
-
-    try {
-      const stored = sessionStorage.getItem('aiapps-api-keys');
-      if (!stored) return null;
-
-      const keys = JSON.parse(stored);
-      return keys[provider] || null;
-    } catch {
-      return null;
     }
   }
 
