@@ -1,53 +1,59 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
+import Image from 'next/image';
+import { Download, Trash2 } from 'lucide-react';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
-  RESOLUTION_PRESETS,
-  QUALITY_PRESETS,
   type ArtStyle,
-  type ResolutionPreset,
   type QualityPreset,
-  type ArtGenerateRequest,
 } from '@/lib/art/types';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
-import ImageGrid from '@/components/art/ImageGrid';
 
-export default function CreateArtPage() {
+const RESOLUTIONS = [
+  { label: '256×256', value: '256x256' },
+  { label: '512×512', value: '512x512' },
+  { label: '768×768', value: '768x768' },
+  { label: '1024×1024', value: '1024x1024' },
+  { label: '1024×768', value: '1024x768' },
+  { label: '768×1024', value: '768x1024' },
+  { label: '1920×1080', value: '1920x1080' },
+  { label: '1080×1920', value: '1080x1920' },
+];
+
+const QUALITY_PRESETS: Array<{
+  value: QualityPreset;
+  label: string;
+  description: string;
+}> = [
+  { value: 'draft', label: '드래프트', description: '빠른 생성, 낮은 품질' },
+  { value: 'standard', label: '표준', description: '균형잡힌 품질과 속도' },
+  { value: 'high', label: '고품질', description: '최고 품질, 느린 생성' },
+];
+
+export default function ArtCreatePage() {
   const {
-    selectedStyle,
     isGenerating,
     generationProgress,
     error,
-    startGeneration,
+    generatedImages,
     setError,
+    startGeneration,
     addGeneratedImages,
+    removeImage,
   } = useArtStore();
 
   // Form state
-  const [style, setStyle] = useState<ArtStyle>(selectedStyle || 'pixel-art');
+  const [style, setStyle] = useState<ArtStyle>('pixel-art');
   const [prompt, setPrompt] = useState('');
-  const [resolution, setResolution] = useState<ResolutionPreset>('512x512');
+  const [resolution, setResolution] = useState('512x512');
   const [quality, setQuality] = useState<QualityPreset>('standard');
-  const [seed, setSeed] = useState<string>('');
   const [batchSize, setBatchSize] = useState(1);
+  const [seed, setSeed] = useState('');
 
-  // Update style when store changes
-  useEffect(() => {
-    if (selectedStyle) {
-      setStyle(selectedStyle);
-    }
-  }, [selectedStyle]);
-
-  // Get preset info
-  const preset = ART_STYLE_PRESETS[style];
-  const resolutionInfo = RESOLUTION_PRESETS[resolution];
-  const qualityInfo = QUALITY_PRESETS[quality];
-
-  // Calculate cost
+  const stylePreset = ART_STYLE_PRESETS[style];
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
 
   const handleGenerate = async () => {
@@ -56,11 +62,10 @@ export default function CreateArtPage() {
       return;
     }
 
-    // Check API key
     const apiKey = getApiKey('gemini');
     if (!apiKey) {
       setError(
-        'API 키가 설정되지 않았습니다. 헤더의 🔑 버튼을 클릭하여 API 키를 등록해주세요.'
+        'API 키가 설정되지 않았습니다. 헤더의 설정 버튼에서 API 키를 등록해주세요.'
       );
       return;
     }
@@ -68,22 +73,20 @@ export default function CreateArtPage() {
     startGeneration();
 
     try {
-      const request: ArtGenerateRequest = {
-        style,
-        prompt,
-        resolution,
-        quality,
-        batchSize,
-        ...(seed && { seed: parseInt(seed, 10) }),
-      };
-
       const response = await fetch('/api/art/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': apiKey,
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          style,
+          prompt: prompt.trim(),
+          resolution,
+          quality,
+          batchSize,
+          ...(seed && { seed: parseInt(seed, 10) }),
+        }),
       });
 
       if (!response.ok) {
@@ -93,280 +96,267 @@ export default function CreateArtPage() {
 
       const data = await response.json();
       addGeneratedImages(data);
-    } catch (err) {
-      setError(
+    } catch (err: unknown) {
+      const errorMessage =
         err instanceof Error
           ? err.message
-          : '이미지 생성 중 오류가 발생했습니다'
-      );
+          : '이미지 생성 중 오류가 발생했습니다';
+      setError(errorMessage);
     }
   };
 
+  const handleDownload = (
+    image: (typeof generatedImages)[0],
+    format: 'png' | 'jpg' = 'png'
+  ) => {
+    const link = document.createElement('a');
+    link.href = image.blobUrl;
+    link.download = `art-${image.id}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <main className="min-h-screen relative z-10">
-      <div className="relative z-10 max-w-5xl mx-auto px-6 md:px-10 py-20 space-y-8">
+    <div className="min-h-screen p-6 md:p-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div className="space-y-4">
-          <Link
-            href="/apps/art-generator"
-            className="inline-block text-purple-400 hover:text-purple-300 transition-colors mb-4"
-          >
-            ← 뒤로 가기
-          </Link>
-          <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 glow-text-purple">
-            아트 생성
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            🎨 AI 아트 생성기
           </h1>
-          <p className="text-xl text-gray-300">
-            프롬프트를 입력하고 AI 이미지를 생성하세요
-          </p>
+          <p className="text-gray-400">2D 게임 아트를 AI로 생성하세요</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Style Selection */}
-            <div className="app-card">
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                아트 스타일
-              </label>
+        {/* Generation Form */}
+        <div className="app-card p-6 md:p-8 space-y-6">
+          {/* Style Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              아트 스타일
+            </label>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value as ArtStyle)}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              disabled={isGenerating}
+            >
+              {Object.entries(ART_STYLE_PRESETS).map(([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.icon} {preset.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-gray-500">
+              {stylePreset.description}
+            </p>
+          </div>
+
+          {/* Prompt */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              프롬프트 <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={`예: ${stylePreset.examples[0]}`}
+              rows={4}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              disabled={isGenerating}
+            />
+          </div>
+
+          {/* Resolution & Quality */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Resolution */}
+            <div>
+              <label className="block text-sm font-medium mb-2">해상도</label>
               <select
-                value={style}
-                onChange={(e) => setStyle(e.target.value as ArtStyle)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                value={resolution}
+                onChange={(e) => setResolution(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={isGenerating}
               >
-                {Object.values(ART_STYLE_PRESETS).map((p) => (
-                  <option key={p.style} value={p.style}>
-                    {p.icon} {p.name} - {p.description}
+                {RESOLUTIONS.map((res) => (
+                  <option key={res.value} value={res.value}>
+                    {res.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-gray-500">
+                추천: {stylePreset.recommendedResolution}
+              </p>
+            </div>
+
+            {/* Quality */}
+            <div>
+              <label className="block text-sm font-medium mb-2">품질</label>
+              <select
+                value={quality}
+                onChange={(e) => setQuality(e.target.value as QualityPreset)}
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={isGenerating}
+              >
+                {QUALITY_PRESETS.map((q) => (
+                  <option key={q.value} value={q.value}>
+                    {q.label} - {q.description}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
 
-            {/* Prompt */}
-            <div className="app-card">
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                프롬프트 *
+          {/* Batch Size & Seed */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Batch Size */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                생성 개수: {batchSize}개
               </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={preset.promptTemplate.replace(
-                  '{subject}',
-                  'your subject'
-                )}
-                rows={4}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              <input
+                type="range"
+                min={1}
+                max={4}
+                value={batchSize}
+                onChange={(e) => setBatchSize(Number(e.target.value))}
+                className="w-full"
                 disabled={isGenerating}
               />
-              <p className="mt-2 text-xs text-gray-500">
-                예시: {preset.examples[0]}
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1개</span>
+                <span>4개</span>
+              </div>
+            </div>
+
+            {/* Seed */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                시드 (선택사항)
+              </label>
+              <input
+                type="number"
+                value={seed}
+                onChange={(e) => setSeed(e.target.value)}
+                placeholder="랜덤"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={isGenerating}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                동일한 시드로 재현 가능한 이미지 생성
               </p>
             </div>
+          </div>
 
-            {/* Resolution & Quality */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="app-card">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  해상도
-                </label>
-                <select
-                  value={resolution}
-                  onChange={(e) =>
-                    setResolution(e.target.value as ResolutionPreset)
-                  }
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={isGenerating}
-                >
-                  {Object.entries(RESOLUTION_PRESETS).map(([key, info]) => (
-                    <option key={key} value={key}>
-                      {info.name} ({info.width}x{info.height})
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-2 text-xs text-gray-500">
-                  권장: {preset.recommendedResolution}
-                </p>
+          {/* Style Info */}
+          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium mb-2">
+              {stylePreset.icon} {stylePreset.name} 스타일
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-400">
+              <div>
+                <span className="text-gray-500">추천 비율:</span>{' '}
+                {stylePreset.aspectRatio}
               </div>
-
-              <div className="app-card">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  품질
-                </label>
-                <select
-                  value={quality}
-                  onChange={(e) => setQuality(e.target.value as QualityPreset)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={isGenerating}
-                >
-                  {Object.entries(QUALITY_PRESETS).map(([key, info]) => (
-                    <option key={key} value={key}>
-                      {info.name} - {info.description}
-                    </option>
-                  ))}
-                </select>
+              <div>
+                <span className="text-gray-500">예상 비용:</span> ≈
+                {estimatedCost.toFixed(2)} 토큰
               </div>
             </div>
+          </div>
 
-            {/* Seed & Batch Size */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="app-card">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  시드 (선택 사항)
-                </label>
-                <input
-                  type="number"
-                  value={seed}
-                  onChange={(e) => setSeed(e.target.value)}
-                  placeholder="랜덤"
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={isGenerating}
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  동일한 결과를 재현하려면 시드 값 입력
-                </p>
-              </div>
-
-              <div className="app-card">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  배치 크기 (1-4)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="4"
-                  value={batchSize}
-                  onChange={(e) =>
-                    setBatchSize(
-                      Math.max(1, Math.min(4, parseInt(e.target.value) || 1))
-                    )
-                  }
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={isGenerating}
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  한 번에 생성할 이미지 수
-                </p>
-              </div>
+          {/* Error Message */}
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+              {error}
             </div>
+          )}
 
-            {/* Error Display */}
-            {error && (
-              <div className="app-card bg-red-900/20 border-red-500/30">
-                <div className="flex items-start gap-3">
-                  <div className="text-xl">❌</div>
-                  <div>
-                    <h3 className="text-sm font-bold text-red-300 mb-1">
-                      오류
-                    </h3>
-                    <p className="text-sm text-gray-300">{error}</p>
-                  </div>
-                </div>
-              </div>
+          {/* Generate Button */}
+          <button
+            onClick={handleGenerate}
+            disabled={isGenerating || !prompt.trim()}
+            className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            {isGenerating ? (
+              <span className="flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                생성 중... {generationProgress}%
+              </span>
+            ) : (
+              '🎨 이미지 생성하기'
             )}
-
-            {/* Generate Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}
-              className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>생성 중... {generationProgress}%</span>
-                </div>
-              ) : (
-                '이미지 생성하기'
-              )}
-            </button>
-          </div>
-
-          {/* Info Panel */}
-          <div className="space-y-6">
-            {/* Style Info */}
-            <div className="app-card bg-purple-900/20 border-purple-500/30">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="text-3xl">{preset.icon}</div>
-                <div>
-                  <h3 className="font-bold text-white">{preset.name}</h3>
-                  <p className="text-xs text-gray-400">{preset.description}</p>
-                </div>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">권장 해상도</span>
-                  <span className="text-white">
-                    {preset.recommendedResolution}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">종횡비</span>
-                  <span className="text-white">{preset.aspectRatio}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Cost Estimation */}
-            <div className="app-card bg-blue-900/20 border-blue-500/30">
-              <h3 className="font-bold text-white mb-4">💰 예상 비용</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">해상도</span>
-                  <span className="text-white">
-                    {resolutionInfo.width}x{resolutionInfo.height}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">배치 크기</span>
-                  <span className="text-white">x{batchSize}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">품질</span>
-                  <span className="text-white">{qualityInfo.name}</span>
-                </div>
-                <div className="pt-2 mt-2 border-t border-blue-700 flex justify-between">
-                  <span className="text-gray-300 font-semibold">
-                    총 예상 비용
-                  </span>
-                  <span className="text-blue-300 font-bold">
-                    ${estimatedCost.toFixed(4)}
-                  </span>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                * 실제 비용은 Gemini API 가격 정책에 따라 다를 수 있습니다
-              </p>
-            </div>
-
-            {/* Tips */}
-            <div className="app-card bg-gray-800/50">
-              <h3 className="font-bold text-white mb-3">💡 프롬프트 팁</h3>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li className="flex gap-2">
-                  <span>•</span>
-                  <span>구체적인 설명을 추가하세요</span>
-                </li>
-                <li className="flex gap-2">
-                  <span>•</span>
-                  <span>스타일 키워드를 포함하세요</span>
-                </li>
-                <li className="flex gap-2">
-                  <span>•</span>
-                  <span>색상이나 분위기를 명시하세요</span>
-                </li>
-                <li className="flex gap-2">
-                  <span>•</span>
-                  <span>영어 프롬프트가 더 정확합니다</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          </button>
         </div>
 
         {/* Generated Images */}
-        <ImageGrid />
+        {generatedImages.length > 0 && (
+          <div className="app-card p-6 md:p-8 space-y-6">
+            <h2 className="text-2xl font-bold">생성된 이미지</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {generatedImages.map((image) => (
+                <div key={image.id} className="app-card overflow-hidden group">
+                  {/* Image */}
+                  <div className="relative aspect-square bg-gray-800">
+                    <Image
+                      src={image.blobUrl}
+                      alt={image.metadata.prompt}
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+
+                  {/* Info & Actions */}
+                  <div className="p-4 space-y-3">
+                    <p className="text-sm line-clamp-2">
+                      {image.metadata.prompt}
+                    </p>
+
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>
+                        {image.metadata.width}×{image.metadata.height}
+                      </span>
+                      <span>•</span>
+                      <span>{image.metadata.style}</span>
+                      {image.metadata.seed && (
+                        <>
+                          <span>•</span>
+                          <span>시드: {image.metadata.seed}</span>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDownload(image, 'png')}
+                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        PNG
+                      </button>
+                      <button
+                        onClick={() => handleDownload(image, 'jpg')}
+                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        JPG
+                      </button>
+                      <button
+                        onClick={() => removeImage(image.id)}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </main>
+    </div>
   );
 }
