@@ -20,7 +20,7 @@ export default function ImageGrid({ showActions = true }: ImageGridProps) {
     format: ImageFormat = 'png'
   ) => {
     const filename = `art-${id}.${format}`;
-    downloadImage(blobUrl, filename);
+    downloadImage(blobUrl, filename, format);
   };
 
   if (generatedImages.length === 0) {

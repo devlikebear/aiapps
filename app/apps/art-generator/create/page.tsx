@@ -48,11 +48,7 @@ export default function CreateArtPage() {
   const qualityInfo = QUALITY_PRESETS[quality];
 
   // Calculate cost
-  const estimatedCost = estimateGenerationCost(
-    resolutionInfo.width,
-    resolutionInfo.height,
-    batchSize
-  );
+  const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
