@@ -29,7 +29,7 @@ export function ReferenceImageUploader({
   const [error, setError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { images, influence } = value;
+  const { images, influence, usages } = value;
   const canAddMore = images.length < REFERENCE_IMAGE_CONSTRAINTS.maxFiles;
 
   // 파일 선택 핸들러
@@ -62,7 +62,6 @@ export function ReferenceImageUploader({
           id: `${Date.now()}-${i}`,
           file,
           preview: result.preview || '',
-          usage: value.images[0]?.usage || 'style',
         });
       }
 
@@ -90,11 +89,15 @@ export function ReferenceImageUploader({
     });
   };
 
-  // 활용 방식 변경
-  const handleUsageChange = (newUsage: ReferenceUsage) => {
+  // 활용 방식 토글 (멀티선택)
+  const handleUsageToggle = (usage: ReferenceUsage) => {
+    const newUsages = usages.includes(usage)
+      ? usages.filter((u) => u !== usage)
+      : [...usages, usage];
+
     onChange({
       ...value,
-      images: images.map((img) => ({ ...img, usage: newUsage })),
+      usages: newUsages,
     });
   };
 
@@ -220,29 +223,28 @@ export function ReferenceImageUploader({
       {/* 설정 옵션 (이미지가 있을 때만) */}
       {images.length > 0 && (
         <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/50 space-y-4">
-          {/* 활용 방식 */}
+          {/* 활용 방식 (멀티선택) */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              ⚙️ 레퍼런스 활용 방식
+              ⚙️ 레퍼런스 활용 방식 (복수 선택 가능)
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {(Object.keys(REFERENCE_USAGE_OPTIONS) as ReferenceUsage[]).map(
                 (usage) => {
                   const option = REFERENCE_USAGE_OPTIONS[usage];
-                  const isSelected =
-                    images.length > 0 && images[0].usage === usage;
+                  const isSelected = usages.includes(usage);
 
                   return (
                     <button
                       key={usage}
                       type="button"
-                      onClick={() => handleUsageChange(usage)}
+                      onClick={() => handleUsageToggle(usage)}
                       disabled={disabled}
                       className={`
                         p-2 rounded-lg border text-left transition-all
                         ${
                           isSelected
-                            ? 'border-purple-500 bg-purple-500/10'
+                            ? 'border-purple-500 bg-purple-500/10 ring-1 ring-purple-500/30'
                             : 'border-gray-700 bg-gray-800 hover:border-gray-600'
                         }
                         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -253,6 +255,11 @@ export function ReferenceImageUploader({
                         <span className="text-xs font-medium">
                           {option.label}
                         </span>
+                        {isSelected && (
+                          <span className="ml-auto text-purple-400 text-xs">
+                            ✓
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500">
                         {option.description}

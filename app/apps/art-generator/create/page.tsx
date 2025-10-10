@@ -69,6 +69,7 @@ export default function ArtCreatePage() {
   const [seed, setSeed] = useState('');
   const [referenceConfig, setReferenceConfig] = useState<ReferenceImageConfig>({
     images: [],
+    usages: ['style'], // 기본값
     influence: 70,
   });
 
@@ -147,10 +148,10 @@ export default function ArtCreatePage() {
     try {
       // 레퍼런스 이미지 Base64 변환
       const referenceImages =
-        referenceConfig.images.length > 0
+        referenceConfig.images.length > 0 && referenceConfig.usages.length > 0
           ? {
               images: referenceConfig.images.map((img) => img.preview),
-              usage: referenceConfig.images[0].usage,
+              usages: referenceConfig.usages,
               influence: referenceConfig.influence,
             }
           : undefined;

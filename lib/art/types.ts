@@ -69,8 +69,8 @@ export interface ReferenceImageConfig {
     id: string;
     file: File;
     preview: string; // Base64 미리보기
-    usage: ReferenceUsage;
   }>;
+  usages: ReferenceUsage[]; // 멀티선택
   influence: number; // 0-100 (영향력)
   blendMode?: 'weak' | 'medium' | 'strong';
 }
@@ -140,8 +140,8 @@ export interface ArtGenerateRequest {
 
   // 레퍼런스 이미지 (새로운 방식)
   referenceImages?: {
-    images: string[]; // Base64 배열
-    usage: ReferenceUsage;
+    images: string[]; // Base64 배열 (data:image/png;base64,... 형식)
+    usages: ReferenceUsage[]; // 멀티선택
     influence: number; // 0-100
   };
 }
