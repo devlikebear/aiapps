@@ -27,21 +27,21 @@ export default function AudioGeneratorPage() {
       <div className="relative z-10 max-w-6xl mx-auto px-6 md:px-10 py-12 space-y-12">
         {/* 헤더 */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-4 mb-4">
+          <nav className="flex items-center justify-center gap-4 mb-4">
             <Link
               href="/"
-              className="inline-block text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors"
             >
               ← 홈으로
             </Link>
             <span className="text-gray-600">|</span>
             <Link
               href="/apps/audio-generator/library"
-              className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors"
             >
               📚 라이브러리
             </Link>
-          </div>
+          </nav>
           <h1 className="text-5xl md:text-6xl font-bold gradient-text glow-text">
             🎵 AI Music Generator
           </h1>

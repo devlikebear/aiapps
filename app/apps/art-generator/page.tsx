@@ -19,21 +19,21 @@ export default function ArtGeneratorPage() {
       <div className="relative z-10 max-w-6xl mx-auto px-6 md:px-10 py-20 space-y-12">
         {/* Header */}
         <div className="space-y-4">
-          <div className="flex items-center gap-4 mb-4">
+          <nav className="flex items-center gap-4 mb-4">
             <Link
               href="/"
-              className="inline-block text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-purple-400 hover:text-purple-300 transition-colors"
             >
               ← 홈으로 돌아가기
             </Link>
             <span className="text-gray-600">|</span>
             <Link
               href="/apps/art-generator/gallery"
-              className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-purple-400 hover:text-purple-300 transition-colors"
             >
               🖼️ 갤러리
             </Link>
-          </div>
+          </nav>
           <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 glow-text-purple">
             🎨 AI 2D 게임 아트 생성기
           </h1>
