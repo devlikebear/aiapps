@@ -2,6 +2,9 @@
   "name": "aiapps",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "AI Tools Hub - Curated collection of AI-powered creative apps",
   "author": "devlikebear",
   "license": "MIT",
