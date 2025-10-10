@@ -1,11 +1,22 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ART_STYLE_PRESETS, type ArtStyle } from '@/lib/art/types';
+import { useArtStore } from '@/lib/stores/art-store';
 
 export default function ArtGeneratorPage() {
+  const router = useRouter();
+  const setSelectedStyle = useArtStore((state) => state.setSelectedStyle);
+
+  const handleStyleSelect = (style: ArtStyle) => {
+    setSelectedStyle(style);
+    router.push('/apps/art-generator/create');
+  };
+
   return (
     <main className="min-h-screen relative z-10">
-      <div className="relative z-10 max-w-5xl mx-auto px-6 md:px-10 py-20 space-y-12">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 md:px-10 py-20 space-y-12">
         {/* Header */}
         <div className="space-y-4">
           <Link
@@ -15,74 +26,85 @@ export default function ArtGeneratorPage() {
             ← 홈으로 돌아가기
           </Link>
           <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 glow-text-purple">
-            🎨 AI Art Generator
+            🎨 AI 2D 게임 아트 생성기
           </h1>
           <p className="text-xl text-gray-300">
-            Gemini 2.5 Flash Image로 2D 게임 아트 생성
+            원하는 스타일을 선택하고 AI로 게임 아트를 생성하세요
           </p>
         </div>
 
-        {/* Description */}
-        <div className="app-card space-y-4">
-          <h2 className="text-2xl font-bold text-white">소개</h2>
-          <p className="text-gray-300 leading-relaxed">
-            AI Art Generator는 Gemini 2.5 Flash Image를 활용하여 2D 게임에
-            필요한 다양한 아트 에셋을 생성합니다. 캐릭터, 배경, 아이템 등 원하는
-            스타일의 픽셀 아트, 애니메이션 스타일 이미지를 손쉽게 만들 수
-            있습니다.
-          </p>
+        {/* Style Presets */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-white">아트 스타일 선택</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Object.values(ART_STYLE_PRESETS).map((preset) => (
+              <button
+                key={preset.style}
+                onClick={() => handleStyleSelect(preset.style)}
+                className="app-card text-left hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="text-5xl group-hover:scale-110 transition-transform">
+                    {preset.icon}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors">
+                      {preset.name}
+                    </h3>
+                    <p className="text-sm text-gray-400 leading-relaxed">
+                      {preset.description}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>권장: {preset.recommendedResolution}</span>
+                      <span>•</span>
+                      <span>비율: {preset.aspectRatio}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <p className="text-xs text-gray-500 mb-2">예시 프롬프트:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {preset.examples.slice(0, 2).map((example, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-2 py-1 bg-gray-800 rounded text-gray-400"
+                      >
+                        {example.split(' ').slice(0, 4).join(' ')}...
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="app-card text-center">
-            <div className="text-4xl mb-3">🎨</div>
-            <h3 className="text-lg font-bold text-white mb-2">Text-to-Image</h3>
-            <p className="text-gray-400 text-sm">프롬프트로 즉시 이미지 생성</p>
-          </div>
-
-          <div className="app-card text-center">
-            <div className="text-4xl mb-3">✏️</div>
-            <h3 className="text-lg font-bold text-white mb-2">이미지 편집</h3>
-            <p className="text-gray-400 text-sm">AI로 이미지 편집 및 개선</p>
-          </div>
-
-          <div className="app-card text-center">
-            <div className="text-4xl mb-3">🖼️</div>
-            <h3 className="text-lg font-bold text-white mb-2">이미지 합성</h3>
-            <p className="text-gray-400 text-sm">여러 이미지를 하나로 합성</p>
-          </div>
-
-          <div className="app-card text-center">
-            <div className="text-4xl mb-3">🎭</div>
-            <h3 className="text-lg font-bold text-white mb-2">스타일 전이</h3>
-            <p className="text-gray-400 text-sm">원하는 스타일 적용</p>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-4 justify-center pt-8">
-          <Link href="/apps/art-generator/create" className="btn-secondary">
-            아트 생성하기
-          </Link>
-          <Link href="/apps/art-generator/gallery" className="btn-outline">
-            갤러리
-          </Link>
-        </div>
-
-        {/* Coming Soon Notice */}
-        <div className="app-card bg-yellow-900/20 border-yellow-500/30">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl">⚠️</div>
-            <div>
-              <h3 className="text-lg font-bold text-yellow-300 mb-1">
-                개발 중
-              </h3>
-              <p className="text-gray-300 text-sm">
-                이 앱은 현재 개발 중입니다. 실제 이미지 생성 기능은 Gemini Flash
-                Image API 연동 후 사용 가능합니다.
-              </p>
-            </div>
+        {/* Quick Actions */}
+        <div className="app-card bg-purple-900/20 border-purple-500/30">
+          <h3 className="text-lg font-bold text-white mb-4">빠른 시작</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link
+              href="/apps/art-generator/create"
+              className="flex items-center gap-3 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              <div className="text-2xl">🎨</div>
+              <div>
+                <div className="font-semibold text-white">직접 생성하기</div>
+                <div className="text-sm text-gray-400">
+                  스타일 선택 없이 바로 시작
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/apps/art-generator/gallery"
+              className="flex items-center gap-3 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              <div className="text-2xl">🖼️</div>
+              <div>
+                <div className="font-semibold text-white">갤러리 보기</div>
+                <div className="text-sm text-gray-400">생성된 이미지 확인</div>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
