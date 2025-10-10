@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import GlobalNav from '@/components/GlobalNav';
 
 export const metadata: Metadata = {
   title: 'AI Tools Hub - Curated AI-Powered Creative Apps',
@@ -22,7 +23,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <GlobalNav />
+        {children}
+      </body>
     </html>
   );
 }
