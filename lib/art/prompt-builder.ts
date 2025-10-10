@@ -4,7 +4,6 @@ import type { CharacterPreset } from './presets/character';
 import type { ItemPreset } from './presets/item';
 import type { EnvironmentPreset } from './presets/environment';
 import {
-  ASSET_TYPE_OPTIONS,
   GENDER_OPTIONS,
   RACE_OPTIONS,
   CLASS_OPTIONS,
@@ -55,10 +54,7 @@ export class PromptBuilder {
     const colorPalette = COLOR_PALETTE_OPTIONS[preset.style.colorPalette];
     parts.push(`${pixelStyle} pixel art`);
 
-    // 2. 에셋 타입
-    const assetType = ASSET_TYPE_OPTIONS[preset.assetType];
-
-    // 3. 기본 속성
+    // 2. 기본 속성
     const age = AGE_OPTIONS[preset.age];
     const gender = GENDER_OPTIONS[preset.gender];
     const race = RACE_OPTIONS[preset.race];

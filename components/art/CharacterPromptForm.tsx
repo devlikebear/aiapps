@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import type { CharacterPreset } from '@/lib/art/presets/character';
 import {
-  DEFAULT_CHARACTER_PRESET,
   ASSET_TYPE_OPTIONS,
   GENDER_OPTIONS,
   RACE_OPTIONS,

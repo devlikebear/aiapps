@@ -2,7 +2,6 @@
 
 import type { EnvironmentPreset } from '@/lib/art/presets/environment';
 import {
-  DEFAULT_ENVIRONMENT_PRESET,
   ENVIRONMENT_TYPE_OPTIONS,
   TIME_OF_DAY_OPTIONS,
   WEATHER_OPTIONS,

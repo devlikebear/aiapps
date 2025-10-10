@@ -2,7 +2,6 @@
 
 import type { ItemPreset } from '@/lib/art/presets/item';
 import {
-  DEFAULT_ITEM_PRESET,
   ITEM_CATEGORY_OPTIONS,
   ITEM_WEAPON_TYPE_OPTIONS,
   ITEM_ARMOR_TYPE_OPTIONS,
