@@ -3,6 +3,9 @@ import './globals.css';
 import GlobalNav from '@/components/GlobalNav';
 import JobProvider from '@/components/JobProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
+import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 
 export const metadata: Metadata = {
   title: 'AI Tools Hub - Curated AI-Powered Creative Apps',
@@ -40,6 +43,9 @@ export default function RootLayout({
             {children}
           </main>
         </ErrorBoundary>
+        <WebVitalsReporter />
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
