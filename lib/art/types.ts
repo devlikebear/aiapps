@@ -41,6 +41,11 @@ export type ResolutionPreset =
 export type ImageFormat = 'png' | 'jpeg' | 'webp';
 
 /**
+ * 품질 프리셋
+ */
+export type QualityPreset = 'draft' | 'standard' | 'high';
+
+/**
  * 아트 스타일 프리셋
  */
 export interface ArtStylePreset {

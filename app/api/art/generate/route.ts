@@ -10,15 +10,15 @@ import type {
   ImageMetadata,
 } from '@/lib/art/types';
 import {
-  extractImageMetadata,
+  parseResolution,
   generateId,
   estimateGenerationCost,
+  calculateAspectRatio,
 } from '@/lib/art/utils';
 
 // Gemini 2.5 Flash Image API 설정
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_IMAGE_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generate';
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
 
 /**
  * POST /api/art/generate
@@ -37,14 +37,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // API 키 확인
-    if (!GEMINI_API_KEY) {
+    // API 키를 헤더에서 가져오기
+    const apiKey = request.headers.get('X-API-Key');
+    if (!apiKey) {
       return NextResponse.json(
         {
-          error:
-            'Gemini API key not configured. Please set GEMINI_API_KEY environment variable.',
+          error: 'API key not provided. Please set your Gemini API key.',
         },
-        { status: 500 }
+        { status: 401 }
       );
     }
 
@@ -71,22 +71,28 @@ export async function POST(request: NextRequest) {
     );
 
     // Gemini API 호출
-    // 주의: 실제 Gemini Image API는 아직 공개되지 않았을 수 있습니다
-    // 이 코드는 가상의 API 구조를 기반으로 작성되었습니다
-    const apiUrl = `${GEMINI_IMAGE_API_URL}?key=${GEMINI_API_KEY}`;
+    const apiUrl = `${GEMINI_IMAGE_API_URL}?key=${apiKey}`;
+
+    // Gemini API 요청 형식에 맞게 변환
+    const promptText = `${body.prompt} (style: ${body.style}, quality: ${quality})`;
 
     const geminiRequest = {
-      prompt: body.prompt,
-      style: body.style,
-      resolution,
-      aspectRatio,
-      batchSize,
-      quality,
-      ...(seed && { seed }),
-      ...(body.colorPalette && { colorPalette: body.colorPalette }),
+      contents: [
+        {
+          parts: [{ text: promptText }],
+        },
+      ],
+      generationConfig: {
+        responseModalities: ['Image'],
+        ...(aspectRatio !== '1:1' && {
+          imageConfig: {
+            aspectRatio: aspectRatio,
+          },
+        }),
+      },
     };
 
-    // API 호출 (실제 구현 시 수정 필요)
+    // API 호출
     const geminiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -110,21 +116,54 @@ export async function POST(request: NextRequest) {
 
     const geminiData = await geminiResponse.json();
 
+    // Gemini API 응답에서 이미지 추출
+    // 응답 형식: { candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] } }] }
+    const candidates = geminiData.candidates || [];
+    if (candidates.length === 0) {
+      return NextResponse.json(
+        { error: 'No images generated' },
+        { status: 500 }
+      );
+    }
+
     // 응답 데이터 변환
     const images = await Promise.all(
-      (geminiData.images || []).map(
-        async (imageData: { data: string }, index: number) => {
-          // 이미지 메타데이터 추출
-          const metadata = await extractImageMetadata(imageData.data, 'png');
+      candidates.slice(0, batchSize).map(
+        async (
+          candidate: {
+            content?: {
+              parts?: Array<{
+                inlineData?: { mimeType?: string; data: string };
+              }>;
+            };
+          },
+          index: number
+        ) => {
+          const parts = candidate.content?.parts || [];
+          const imagePart = parts.find((part) => part.inlineData);
+
+          if (!imagePart || !imagePart.inlineData) {
+            throw new Error('No image data in response');
+          }
+
+          const imageBase64 = imagePart.inlineData.data;
+          const mimeType = imagePart.inlineData.mimeType || 'image/png';
+
+          // 해상도 정보 파싱 (요청 파라미터에서 가져옴)
+          const { width, height } = parseResolution(resolution);
+          const aspectRatioValue = calculateAspectRatio(width, height);
+
+          // Base64 이미지 크기 추정 (base64는 원본의 약 4/3 크기)
+          const estimatedFileSize = Math.ceil((imageBase64.length * 3) / 4);
 
           const imageMetadata: ImageMetadata = {
             id: generateId(),
             style: body.style,
             format: 'png',
-            width: metadata.width,
-            height: metadata.height,
-            fileSize: metadata.fileSize,
-            aspectRatio: metadata.aspectRatio,
+            width,
+            height,
+            fileSize: estimatedFileSize,
+            aspectRatio: aspectRatioValue,
             prompt: body.prompt,
             seed: seed ? seed + index : undefined,
             quality: quality,
@@ -134,7 +173,7 @@ export async function POST(request: NextRequest) {
           };
 
           return {
-            data: imageData.data,
+            data: imageBase64,
             format: 'png' as const,
             metadata: imageMetadata,
           };
@@ -169,6 +208,6 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     message: 'Art Generator API is running',
-    apiKeyConfigured: !!GEMINI_API_KEY,
+    model: GEMINI_IMAGE_MODEL,
   });
 }
