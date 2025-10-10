@@ -55,4 +55,17 @@ module.exports = [
       'no-var': 'error',
     },
   },
+  // Test files - allow console statements
+  {
+    files: [
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      'e2e/**/*.ts',
+    ],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];
