@@ -53,12 +53,23 @@ export default function GlobalNav() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-lg border-b border-gray-800 shadow-lg">
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-lg border-b border-gray-800 shadow-lg"
+        role="navigation"
+        aria-label="메인 네비게이션"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="text-2xl group-hover:scale-110 transition-transform">
+            <Link
+              href="/"
+              className="flex items-center gap-3 group"
+              aria-label="AI Tools Hub 홈으로 이동"
+            >
+              <div
+                className="text-2xl group-hover:scale-110 transition-transform"
+                aria-hidden="true"
+              >
                 🤖
               </div>
               <div className="hidden sm:block">
@@ -70,7 +81,11 @@ export default function GlobalNav() {
             </Link>
 
             {/* Center - App Navigation */}
-            <div className="hidden md:flex items-center gap-2">
+            <div
+              className="hidden md:flex items-center gap-2"
+              role="group"
+              aria-label="앱 네비게이션"
+            >
               {/* Audio Generator */}
               <Link
                 href="/apps/audio-generator/create"
@@ -79,8 +94,12 @@ export default function GlobalNav() {
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                     : 'text-gray-300 hover:bg-gray-800'
                 }`}
+                aria-label="오디오 생성기로 이동"
+                aria-current={
+                  isActive('/apps/audio-generator') ? 'page' : undefined
+                }
               >
-                <Music className="w-4 h-4" />
+                <Music className="w-4 h-4" aria-hidden="true" />
                 <span className="text-sm font-medium">오디오</span>
               </Link>
 
@@ -92,8 +111,12 @@ export default function GlobalNav() {
                     ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                     : 'text-gray-300 hover:bg-gray-800'
                 }`}
+                aria-label="아트 생성기로 이동"
+                aria-current={
+                  isActive('/apps/art-generator') ? 'page' : undefined
+                }
               >
-                <ImageIcon className="w-4 h-4" />
+                <ImageIcon className="w-4 h-4" aria-hidden="true" />
                 <span className="text-sm font-medium">아트</span>
               </Link>
 
@@ -105,8 +128,10 @@ export default function GlobalNav() {
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                     : 'text-gray-300 hover:bg-gray-800'
                 }`}
+                aria-label="미디어 라이브러리로 이동"
+                aria-current={isActive('/library') ? 'page' : undefined}
               >
-                <Library className="w-4 h-4" />
+                <Library className="w-4 h-4" aria-hidden="true" />
                 <span className="text-sm font-medium">라이브러리</span>
               </Link>
             </div>
@@ -118,8 +143,11 @@ export default function GlobalNav() {
                 <button
                   onClick={() => setIsSearchOpen(!isSearchOpen)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300"
+                  aria-label="앱 검색 열기"
+                  aria-expanded={isSearchOpen}
+                  aria-controls="app-search-dropdown"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-4 h-4" aria-hidden="true" />
                   <span className="text-sm">앱 검색</span>
                 </button>
 
@@ -132,19 +160,34 @@ export default function GlobalNav() {
                     />
 
                     {/* Search Dropdown */}
-                    <div className="absolute top-full right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50">
+                    <div
+                      id="app-search-dropdown"
+                      className="absolute top-full right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50"
+                      role="dialog"
+                      aria-label="앱 검색"
+                    >
                       <div className="p-3">
+                        <label htmlFor="app-search-input" className="sr-only">
+                          앱 검색어 입력
+                        </label>
                         <input
+                          id="app-search-input"
                           type="text"
                           placeholder="앱 검색..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                           autoFocus
+                          role="searchbox"
+                          aria-label="앱 검색어 입력"
                         />
                       </div>
 
-                      <div className="border-t border-gray-700">
+                      <div
+                        className="border-t border-gray-700"
+                        role="list"
+                        aria-label="검색 결과"
+                      >
                         {filteredApps.length > 0 ? (
                           filteredApps.map((app) => (
                             <Link
@@ -155,8 +198,11 @@ export default function GlobalNav() {
                                 setSearchQuery('');
                               }}
                               className="flex items-start gap-3 px-4 py-3 hover:bg-gray-700 transition-colors"
+                              role="listitem"
                             >
-                              <div className="text-2xl">{app.icon}</div>
+                              <div className="text-2xl" aria-hidden="true">
+                                {app.icon}
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-medium text-white">
                                   {app.name}
@@ -168,7 +214,10 @@ export default function GlobalNav() {
                             </Link>
                           ))
                         ) : (
-                          <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                          <div
+                            className="px-4 py-6 text-center text-gray-500 text-sm"
+                            role="status"
+                          >
                             검색 결과가 없습니다
                           </div>
                         )}
@@ -179,17 +228,29 @@ export default function GlobalNav() {
               </div>
 
               {/* API Key Status */}
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-lg border">
+              <div
+                className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-lg border"
+                role="status"
+                aria-label={
+                  hasKey ? 'API 키가 등록되어 있습니다' : 'API 키가 필요합니다'
+                }
+              >
                 {hasKey ? (
                   <>
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span
+                      className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+                      aria-hidden="true"
+                    />
                     <span className="text-xs text-green-400">
                       API 키 등록됨
                     </span>
                   </>
                 ) : (
                   <>
-                    <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    <span
+                      className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"
+                      aria-hidden="true"
+                    />
                     <span className="text-xs text-yellow-400">API 키 필요</span>
                   </>
                 )}
@@ -199,9 +260,11 @@ export default function GlobalNav() {
               <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                title="API 키 설정"
+                aria-label="API 키 설정 열기"
               >
-                <span className="text-lg">🔑</span>
+                <span className="text-lg" aria-hidden="true">
+                  🔑
+                </span>
                 <span className="hidden sm:inline text-sm font-medium text-gray-300">
                   설정
                 </span>
