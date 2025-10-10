@@ -58,11 +58,14 @@ export class Logger {
       this.logs.shift();
     }
 
-    // 콘솔 출력
-    const levelName = LogLevel[level];
-    const timestamp = entry.timestamp.toISOString();
-    const metaStr = metadata ? ` ${JSON.stringify(metadata)}` : '';
-    console.log(`[${timestamp}] [${levelName}] ${message}${metaStr}`);
+    // 콘솔 출력 (개발 환경에서만)
+    if (process.env.NODE_ENV !== 'production') {
+      const levelName = LogLevel[level];
+      const timestamp = entry.timestamp.toISOString();
+      const metaStr = metadata ? ` ${JSON.stringify(metadata)}` : '';
+      // eslint-disable-next-line no-console
+      console.log(`[${timestamp}] [${levelName}] ${message}${metaStr}`);
+    }
   }
 
   debug(message: string, metadata?: Record<string, unknown>): void {

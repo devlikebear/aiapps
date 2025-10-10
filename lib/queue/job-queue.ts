@@ -52,6 +52,7 @@ export class JobQueueManager {
 
       return queue;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load job queue:', error);
       return { jobs: [], lastUpdated: Date.now() };
     }
@@ -79,6 +80,7 @@ export class JobQueueManager {
       queue.lastUpdated = Date.now();
       localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to save job queue:', error);
     }
   }

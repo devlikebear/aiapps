@@ -103,6 +103,7 @@ export default function LibraryPage() {
       });
       setAvailableTags(Array.from(allTags).sort());
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load media:', error);
     } finally {
       setIsLoading(false);

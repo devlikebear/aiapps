@@ -58,6 +58,7 @@ export default function ArtGalleryPage() {
       );
       setImageList(sorted);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load image gallery:', error);
     } finally {
       setIsLoading(false);
@@ -69,6 +70,7 @@ export default function ArtGalleryPage() {
       const info = await getStorageSize();
       setStorageInfo(info);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load storage info:', error);
     }
   };
@@ -111,6 +113,7 @@ export default function ArtGalleryPage() {
       // 저장소 정보 업데이트
       loadStorageInfo();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to delete image:', error);
       alert('이미지 삭제에 실패했습니다.');
     }

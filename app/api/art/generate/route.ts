@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
 
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.json().catch(() => ({}));
+      // eslint-disable-next-line no-console
       console.error('Gemini API error:', errorData);
 
       return NextResponse.json(
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Art generation error:', error);
 
     return NextResponse.json(

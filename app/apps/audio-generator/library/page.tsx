@@ -51,6 +51,7 @@ export default function AudioLibraryPage() {
       );
       setAudioList(sorted);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load audio library:', error);
     } finally {
       setIsLoading(false);
@@ -62,6 +63,7 @@ export default function AudioLibraryPage() {
       const info = await getStorageSize();
       setStorageInfo(info);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load storage info:', error);
     }
   };
@@ -151,6 +153,7 @@ export default function AudioLibraryPage() {
       // 저장소 정보 업데이트
       loadStorageInfo();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to delete audio:', error);
       alert('오디오 삭제에 실패했습니다.');
     }
