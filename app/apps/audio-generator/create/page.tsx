@@ -56,17 +56,28 @@ export default function AudioCreatePage() {
         const allAudio = await getAllAudio();
 
         // 현재 설정에서 태그 생성
+        const currentBpm = customBpm || preset.bpm.default;
         const currentTags = generateAudioTags({
           type,
           genre,
-          bpm: customBpm || preset.bpm.default,
+          bpm: currentBpm,
           duration,
         });
+
+        console.log('Current settings:', {
+          type,
+          genre,
+          bpm: currentBpm,
+          duration,
+        });
+        console.log('Generated tags:', currentTags);
 
         // 태그가 일치하는 오디오 필터링
         const filtered = allAudio.filter((audio) =>
           currentTags.some((tag) => audio.tags?.includes(tag))
         );
+
+        console.log(`Found ${filtered.length} related audio files`);
 
         // 최신순 정렬
         filtered.sort((a, b) => {
@@ -84,7 +95,7 @@ export default function AudioCreatePage() {
     };
 
     loadRelatedAudio();
-  }, [type, genre, customBpm, preset.bpm.default, duration]);
+  }, [type, genre, customBpm, preset.bpm.default, duration, preset]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {

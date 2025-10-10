@@ -82,10 +82,15 @@ export default function ArtCreatePage() {
           quality,
         });
 
+        console.log('Current settings:', { style, resolution, quality });
+        console.log('Generated tags:', currentTags);
+
         // 태그가 일치하는 이미지 필터링
         const filtered = allImages.filter((image) =>
           currentTags.some((tag) => image.tags?.includes(tag))
         );
+
+        console.log(`Found ${filtered.length} related images`);
 
         // 최신순 정렬
         filtered.sort((a, b) => {
