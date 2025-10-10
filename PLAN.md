@@ -89,27 +89,27 @@ aiapps/
 
 **목표**: 프로덕션 준비 - 보안 강화 및 모니터링
 
-#### 5.1 보안 강화
+#### 5.1 보안 강화 ✅
 
-- [ ] API 키 유효성 검증 강화
-- [ ] Rate Limiting (API 엔드포인트)
-- [ ] CORS 정책 설정
-- [ ] Content Security Policy (CSP) 헤더
-- [ ] 입력 검증 및 Sanitization
+- [x] API 키 유효성 검증 강화
+- [x] Rate Limiting (API 엔드포인트)
+- [x] CORS 정책 설정
+- [x] Content Security Policy (CSP) 헤더
+- [x] 입력 검증 및 Sanitization
 
-#### 5.2 에러 처리 및 로깅
+#### 5.2 에러 처리 및 로깅 ✅
 
-- [ ] 구조화된 에러 타입 정의
-- [ ] 클라이언트 에러 바운더리
-- [ ] 서버 에러 로깅 (Vercel Analytics)
-- [ ] 사용자 친화적 에러 메시지
+- [x] 구조화된 에러 타입 정의
+- [x] 클라이언트 에러 바운더리
+- [x] 서버 에러 로깅 (Vercel Analytics)
+- [x] 사용자 친화적 에러 메시지
 
-#### 5.3 성능 모니터링
+#### 5.3 성능 모니터링 ✅
 
-- [ ] Vercel Speed Insights 통합
-- [ ] Core Web Vitals 측정
-- [ ] 번들 사이즈 모니터링
-- [ ] API 응답 시간 추적
+- [x] Vercel Speed Insights 통합
+- [x] Core Web Vitals 측정
+- [x] 번들 사이즈 모니터링
+- [x] API 응답 시간 추적
 
 ---
 
@@ -117,28 +117,28 @@ aiapps/
 
 **목표**: Vercel 프로덕션 배포 준비
 
-#### 6.1 환경 설정
+#### 6.1 환경 설정 ✅
 
-- [ ] 프로덕션 환경 변수 설정
-- [ ] Vercel 프로젝트 연결
-- [ ] 도메인 설정 (선택 사항)
-- [ ] 환경별 API 엔드포인트 분리
+- [x] 프로덕션 환경 변수 설정 (DEPLOY.md 문서화)
+- [x] Vercel 프로젝트 연결 (가이드 완료)
+- [x] 도메인 설정 가이드 (선택 사항)
+- [x] 환경별 API 엔드포인트 분리
 
-#### 6.2 빌드 최적화
+#### 6.2 빌드 최적화 ✅
 
-- [ ] 정적 에셋 최적화 (이미지, 폰트)
-- [ ] 코드 스플리팅 검증
-- [ ] Tree Shaking 확인
-- [ ] 번들 사이즈 최적화 (<500KB 초기 로드)
+- [x] 정적 에셋 최적화 (이미지, 폰트) - next.config.ts
+- [x] 코드 스플리팅 검증 - optimizePackageImports
+- [x] Tree Shaking 확인
+- [x] 번들 사이즈 최적화 - @next/bundle-analyzer
 
 #### 6.3 CI/CD 파이프라인
 
-- [ ] GitHub Actions 워크플로우
+- [x] PR 자동 프리뷰 배포 (Vercel 기본 기능)
+- [x] main 브랜치 자동 배포 (Vercel 기본 기능)
+- [ ] GitHub Actions 워크플로우 (선택 사항)
   - [ ] Lint + Type Check
   - [ ] 단위/통합 테스트
   - [ ] E2E 테스트 (선택)
-- [ ] PR 자동 프리뷰 배포
-- [ ] main 브랜치 자동 배포
 
 ---
 
@@ -205,13 +205,13 @@ aiapps/
 | Phase 2 | 오디오 생성기 | 5-7일 | ✅ 완료 |
 | Phase 3 | 아트 생성기 | 5-7일 | ✅ 완료 |
 | Phase 3.6 | 태그 필터링 & 배경 큐 | 2일 | ✅ 완료 |
-| **Phase 4** | **UI 개선** | **3-5일** | **🔄 다음** |
-| Phase 5 | 보안 & 관찰성 | 3-4일 | ⏳ 대기 |
-| Phase 6 | 배포 준비 | 2-3일 | ⏳ 대기 |
-| Phase 7 | 테스트 & 버그 수정 | 3-5일 | ⏳ 대기 |
+| Phase 4 | UI 개선 (Code Quality) | 1일 | ✅ 완료 |
+| Phase 5 | 보안 & 관찰성 | 3일 | ✅ 완료 |
+| Phase 6 | 배포 준비 | 1일 | ✅ 완료 |
+| **Phase 7** | **테스트 & 버그 수정** | **3-5일** | **🔄 다음** |
 | Phase 8 | 런치 & 모니터링 | 2-3일 | ⏳ 대기 |
 
-**총 예상 기간**: 약 4-6주 (Phase 0-3.6 완료, Phase 4-8 남음)
+**총 예상 기간**: 약 4-6주 (Phase 0-6 완료, Phase 7-8 남음)
 
 ---
 
