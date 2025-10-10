@@ -9,6 +9,7 @@ import type {
   ArtGenerateResponse,
   ImageMetadata,
 } from '@/lib/art/types';
+import { REFERENCE_USAGE_OPTIONS } from '@/lib/art/types';
 import {
   parseResolution,
   generateId,
@@ -92,8 +93,15 @@ export async function POST(request: NextRequest) {
 
     // 레퍼런스 이미지가 있으면 활용 방식 정보 추가
     if (body.referenceImages && body.referenceImages.usages.length > 0) {
-      const usageDescriptions = body.referenceImages.usages.join(', ');
-      promptText += ` [Reference usage: ${usageDescriptions}, influence: ${body.referenceImages.influence}%]`;
+      // 활용 방식의 상세 설명 생성
+      const usageDescriptions = body.referenceImages.usages
+        .map((usage) => {
+          const option = REFERENCE_USAGE_OPTIONS[usage];
+          return `${option.label} (${option.description})`;
+        })
+        .join(', ');
+
+      promptText += ` [Reference Images - Apply: ${usageDescriptions}. Influence: ${body.referenceImages.influence}%]`;
     }
 
     // contents parts 구성
