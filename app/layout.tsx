@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import GlobalNav from '@/components/GlobalNav';
 import JobProvider from '@/components/JobProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'AI Tools Hub - Curated AI-Powered Creative Apps',
@@ -34,9 +35,11 @@ export default function RootLayout({
         </a>
         <GlobalNav />
         <JobProvider />
-        <main id="main-content" role="main">
-          {children}
-        </main>
+        <ErrorBoundary>
+          <main id="main-content" role="main">
+            {children}
+          </main>
+        </ErrorBoundary>
       </body>
     </html>
   );

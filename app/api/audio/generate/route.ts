@@ -17,6 +17,8 @@ import {
   validateRequest,
 } from '@/lib/validation/schemas';
 import { validateGeminiApiKeyFormat } from '@/lib/api-key/validation';
+import { handleAPIError } from '@/lib/errors/handler';
+import { ValidationError, AuthenticationError } from '@/lib/errors/types';
 
 export async function POST(request: NextRequest) {
   // Rate Limiting 검사
@@ -34,32 +36,26 @@ export async function POST(request: NextRequest) {
     // Zod 스키마 기반 입력 검증
     const validation = validateRequest(audioGenerateRequestSchema, body);
     if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Invalid request', details: validation.error },
-        { status: 400 }
-      );
+      throw new ValidationError('Invalid request parameters', validation.error);
     }
 
     // API 키 검증
     const apiKey = request.headers.get('X-API-Key');
     if (!apiKey) {
-      return NextResponse.json(
-        {
-          error: 'API key not provided. Please set your Gemini API key.',
-        },
-        { status: 401 }
-      );
+      throw new AuthenticationError('API key not provided', {
+        path: request.nextUrl.pathname,
+      });
     }
 
     // API 키 형식 검증
     const keyValidation = validateGeminiApiKeyFormat(apiKey);
     if (!keyValidation.valid) {
-      return NextResponse.json(
+      throw new AuthenticationError(
+        keyValidation.error || 'Invalid API key format',
         {
-          error: keyValidation.error,
+          path: request.nextUrl.pathname,
           details: keyValidation.details,
-        },
-        { status: 401 }
+        }
       );
     }
 
@@ -70,7 +66,7 @@ export async function POST(request: NextRequest) {
     const genre = validatedBody.genre as GameGenre;
     const preset = GAME_PRESETS[genre];
     if (!preset) {
-      return NextResponse.json({ error: 'Invalid genre' }, { status: 400 });
+      throw new ValidationError('Invalid genre', `Genre "${genre}" not found`);
     }
 
     // Lyria 요청 파라미터 구성
@@ -142,14 +138,6 @@ export async function POST(request: NextRequest) {
       client.disconnect();
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Audio generation error:', error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : 'Audio generation failed',
-      },
-      { status: 500 }
-    );
+    return handleAPIError(error);
   }
 }

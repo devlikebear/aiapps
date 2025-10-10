@@ -16,6 +16,13 @@ import {
   calculateAspectRatio,
 } from '@/lib/art/utils';
 import { rateLimiters, checkRateLimit } from '@/lib/middleware/rate-limit';
+import { handleAPIError } from '@/lib/errors/handler';
+import {
+  ValidationError,
+  AuthenticationError,
+  APIError,
+  ErrorCode,
+} from '@/lib/errors/types';
 
 // Gemini 2.5 Flash Image API 설정
 const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
@@ -41,21 +48,18 @@ export async function POST(request: NextRequest) {
 
     // 필수 파라미터 검증
     if (!body.style || !body.prompt) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: style and prompt' },
-        { status: 400 }
+      throw new ValidationError(
+        'Missing required parameters: style and prompt',
+        'Both style and prompt are required'
       );
     }
 
     // API 키를 헤더에서 가져오기
     const apiKey = request.headers.get('X-API-Key');
     if (!apiKey) {
-      return NextResponse.json(
-        {
-          error: 'API key not provided. Please set your Gemini API key.',
-        },
-        { status: 401 }
-      );
+      throw new AuthenticationError('API key not provided', {
+        path: request.nextUrl.pathname,
+      });
     }
 
     // 기본값 설정
@@ -67,9 +71,9 @@ export async function POST(request: NextRequest) {
 
     // 배치 크기 검증
     if (batchSize < 1 || batchSize > 4) {
-      return NextResponse.json(
-        { error: 'Batch size must be between 1 and 4' },
-        { status: 400 }
+      throw new ValidationError(
+        'Invalid batch size',
+        'Batch size must be between 1 and 4'
       );
     }
 
@@ -113,15 +117,13 @@ export async function POST(request: NextRequest) {
 
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.json().catch(() => ({}));
-      // eslint-disable-next-line no-console
-      console.error('Gemini API error:', errorData);
-
-      return NextResponse.json(
+      throw new APIError(
+        'Failed to generate image',
+        ErrorCode.GEMINI_API_ERROR,
+        geminiResponse.status,
         {
-          error: 'Failed to generate image',
           details: errorData.error?.message || 'Unknown error',
-        },
-        { status: geminiResponse.status }
+        }
       );
     }
 
@@ -131,9 +133,11 @@ export async function POST(request: NextRequest) {
     // 응답 형식: { candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] } }] }
     const candidates = geminiData.candidates || [];
     if (candidates.length === 0) {
-      return NextResponse.json(
-        { error: 'No images generated' },
-        { status: 500 }
+      throw new APIError(
+        'No images generated',
+        ErrorCode.GEMINI_API_ERROR,
+        500,
+        { details: 'Empty candidates array in response' }
       );
     }
 
@@ -198,16 +202,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Art generation error:', error);
-
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleAPIError(error);
   }
 }
 
