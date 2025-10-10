@@ -8,6 +8,22 @@ import AudioPlayer from '@/components/audio/AudioPlayer';
 import { downloadAudio } from '@/lib/audio/converter';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
+import { getAllAudio } from '@/lib/storage/indexed-db';
+import { generateAudioTags } from '@/lib/utils/tags';
+import { Play, Pause, Download } from 'lucide-react';
+
+interface StoredAudio {
+  id: string;
+  data: string;
+  metadata: {
+    prompt: string;
+    genre?: string;
+    type?: string;
+    [key: string]: unknown;
+  };
+  tags: string[];
+  createdAt: Date;
+}
 
 export default function AudioCreatePage() {
   const { error, currentAudio, setError } = useAudioStore();
@@ -19,12 +35,56 @@ export default function AudioCreatePage() {
   const [duration, setDuration] = useState(60);
   const [customBpm, setCustomBpm] = useState<number | null>(null);
 
+  // Related audio state
+  const [relatedAudio, setRelatedAudio] = useState<StoredAudio[]>([]);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [audioElements, setAudioElements] = useState<
+    Map<string, HTMLAudioElement>
+  >(new Map());
+
   const preset = GAME_PRESETS[genre];
 
   // 타입 변경 시 duration 자동 조정
   useEffect(() => {
     setDuration(type === 'bgm' ? 60 : 5);
   }, [type]);
+
+  // 관련 오디오 로드 및 필터링
+  useEffect(() => {
+    const loadRelatedAudio = async () => {
+      try {
+        const allAudio = await getAllAudio();
+
+        // 현재 설정에서 태그 생성
+        const currentTags = generateAudioTags({
+          type,
+          genre,
+          bpm: customBpm || preset.bpm.default,
+          duration,
+        });
+
+        // 태그가 일치하는 오디오 필터링
+        const filtered = allAudio.filter((audio) =>
+          currentTags.some((tag) => audio.tags?.includes(tag))
+        );
+
+        // 최신순 정렬
+        filtered.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setRelatedAudio(filtered.slice(0, 6)); // 최대 6개만 표시
+      } catch (error) {
+        console.error('Failed to load related audio:', error);
+      }
+    };
+
+    loadRelatedAudio();
+  }, [type, genre, customBpm, preset.bpm.default, duration]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -77,6 +137,64 @@ export default function AudioCreatePage() {
       `audio-${currentAudio.id}`,
       format
     );
+  };
+
+  // 관련 오디오 재생 토글
+  const togglePlayRelated = (audioId: string, audioData: string) => {
+    // 현재 재생 중인 오디오가 있으면 정지
+    if (playingAudioId && playingAudioId !== audioId) {
+      const prevAudio = audioElements.get(playingAudioId);
+      if (prevAudio) {
+        prevAudio.pause();
+        prevAudio.currentTime = 0;
+      }
+    }
+
+    // 같은 오디오를 다시 클릭하면 정지
+    if (playingAudioId === audioId) {
+      const audio = audioElements.get(audioId);
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      setPlayingAudioId(null);
+      return;
+    }
+
+    // 새 오디오 재생
+    let audio = audioElements.get(audioId);
+    if (!audio) {
+      // Base64 데이터에서 오디오 엘리먼트 생성
+      const dataUrl = audioData.startsWith('data:')
+        ? audioData
+        : `data:audio/wav;base64,${audioData}`;
+      audio = new Audio(dataUrl);
+      audio.addEventListener('ended', () => {
+        setPlayingAudioId(null);
+      });
+      setAudioElements((prev) => new Map(prev).set(audioId, audio!));
+    }
+
+    audio.play();
+    setPlayingAudioId(audioId);
+  };
+
+  // 관련 오디오 다운로드
+  const handleDownloadRelated = async (
+    audioData: string,
+    audioId: string,
+    format: 'wav' | 'mp3' | 'ogg'
+  ) => {
+    // Base64 string을 ArrayBuffer로 변환
+    const base64 = audioData.startsWith('data:')
+      ? audioData.split(',')[1]
+      : audioData;
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    await downloadAudio(bytes.buffer, `audio-${audioId}`, format);
   };
 
   return (
@@ -287,6 +405,115 @@ export default function AudioCreatePage() {
               >
                 💾 OGG 다운로드
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Related Audio Section */}
+        {relatedAudio.length > 0 && (
+          <div className="app-card p-6 md:p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">🎵 관련 오디오</h2>
+              <p className="text-sm text-gray-400">
+                현재 설정과 유사한 오디오 {relatedAudio.length}개
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {relatedAudio.map((audio) => (
+                <div
+                  key={audio.id}
+                  className="app-card p-4 space-y-3 hover:ring-2 hover:ring-blue-500/50 transition-all"
+                >
+                  {/* Prompt */}
+                  <p className="text-sm line-clamp-2 font-medium">
+                    {audio.metadata.prompt}
+                  </p>
+
+                  {/* Metadata */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                    <div>
+                      <span className="text-gray-500">타입:</span>{' '}
+                      {audio.metadata.type === 'bgm' ? '🎼 BGM' : '⚡ SFX'}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">장르:</span>{' '}
+                      {String(audio.metadata.genre)}
+                    </div>
+                    {typeof audio.metadata.bpm === 'number' && (
+                      <div>
+                        <span className="text-gray-500">BPM:</span>{' '}
+                        {audio.metadata.bpm}
+                      </div>
+                    )}
+                    {typeof audio.metadata.duration === 'number' && (
+                      <div>
+                        <span className="text-gray-500">길이:</span>{' '}
+                        {audio.metadata.duration}초
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  {audio.tags && audio.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {audio.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 bg-blue-500/10 text-blue-400 rounded text-xs"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {audio.tags.length > 3 && (
+                        <span className="px-2 py-1 text-gray-500 text-xs">
+                          +{audio.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => togglePlayRelated(audio.id, audio.data)}
+                      className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      {playingAudioId === audio.id ? (
+                        <>
+                          <Pause className="w-4 h-4" />
+                          정지
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          재생
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDownloadRelated(audio.data, audio.id, 'wav')
+                      }
+                      className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
+                      title="WAV 다운로드"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className="text-xs text-gray-500 text-right">
+                    {new Date(audio.createdAt).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

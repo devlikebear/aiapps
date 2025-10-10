@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, Eye } from 'lucide-react';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
@@ -12,6 +12,8 @@ import {
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
+import { getAllImages } from '@/lib/storage/indexed-db';
+import { generateImageTags } from '@/lib/utils/tags';
 
 const RESOLUTIONS = [
   { label: '256×256', value: '256x256' },
@@ -34,6 +36,21 @@ const QUALITY_PRESETS: Array<{
   { value: 'high', label: '고품질', description: '최고 품질, 느린 생성' },
 ];
 
+interface StoredImage {
+  id: string;
+  data: string;
+  metadata: {
+    prompt: string;
+    style?: string;
+    width?: number;
+    height?: number;
+    quality?: string;
+    [key: string]: unknown;
+  };
+  tags: string[];
+  createdAt: Date;
+}
+
 export default function ArtCreatePage() {
   const { error, generatedImages, setError, removeImage } = useArtStore();
 
@@ -45,8 +62,48 @@ export default function ArtCreatePage() {
   const [batchSize, setBatchSize] = useState(1);
   const [seed, setSeed] = useState('');
 
+  // Related images state
+  const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
+  const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
+
   const stylePreset = ART_STYLE_PRESETS[style];
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
+
+  // 관련 이미지 로드 및 필터링
+  useEffect(() => {
+    const loadRelatedImages = async () => {
+      try {
+        const allImages = await getAllImages();
+
+        // 현재 설정에서 태그 생성
+        const currentTags = generateImageTags({
+          style,
+          resolution,
+          quality,
+        });
+
+        // 태그가 일치하는 이미지 필터링
+        const filtered = allImages.filter((image) =>
+          currentTags.some((tag) => image.tags?.includes(tag))
+        );
+
+        // 최신순 정렬
+        filtered.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setRelatedImages(filtered.slice(0, 6)); // 최대 6개만 표시
+      } catch (error) {
+        console.error('Failed to load related images:', error);
+      }
+    };
+
+    loadRelatedImages();
+  }, [style, resolution, quality]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -98,6 +155,23 @@ export default function ArtCreatePage() {
     const link = document.createElement('a');
     link.href = image.blobUrl;
     link.download = `art-${image.id}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 관련 이미지 다운로드
+  const handleDownloadRelated = (
+    imageData: string,
+    imageId: string,
+    format: 'png' | 'jpg' = 'png'
+  ) => {
+    const link = document.createElement('a');
+    const dataUrl = imageData.startsWith('data:')
+      ? imageData
+      : `data:image/png;base64,${imageData}`;
+    link.href = dataUrl;
+    link.download = `art-${imageId}.${format}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -326,6 +400,257 @@ export default function ArtCreatePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Related Images Section */}
+        {relatedImages.length > 0 && (
+          <div className="app-card p-6 md:p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">🎨 관련 이미지</h2>
+              <p className="text-sm text-gray-400">
+                현재 설정과 유사한 이미지 {relatedImages.length}개
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {relatedImages.map((image) => {
+                const dataUrl = image.data.startsWith('data:')
+                  ? image.data
+                  : `data:image/png;base64,${image.data}`;
+
+                return (
+                  <div
+                    key={image.id}
+                    className="app-card overflow-hidden group cursor-pointer hover:ring-2 hover:ring-purple-500/50 transition-all"
+                  >
+                    {/* Thumbnail */}
+                    <div
+                      className="relative aspect-square bg-gray-800"
+                      onClick={() => setSelectedImage(image)}
+                    >
+                      <Image
+                        src={dataUrl}
+                        alt={image.metadata.prompt}
+                        fill
+                        className="object-contain"
+                        unoptimized
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                        <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3 space-y-2">
+                      <p className="text-xs line-clamp-2 text-gray-400">
+                        {image.metadata.prompt}
+                      </p>
+
+                      {/* Metadata */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {image.metadata.width && image.metadata.height && (
+                          <span>
+                            {image.metadata.width}×{image.metadata.height}
+                          </span>
+                        )}
+                        {image.metadata.style && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate">
+                              {image.metadata.style}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Tags */}
+                      {image.tags && image.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {image.tags.slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {image.tags.length > 2 && (
+                            <span className="px-1.5 py-0.5 text-gray-500 text-xs">
+                              +{image.tags.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadRelated(image.data, image.id, 'png');
+                          }}
+                          className="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          PNG
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadRelated(image.data, image.id, 'jpg');
+                          }}
+                          className="flex-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          JPG
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Image Detail Modal */}
+        {selectedImage && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedImage(null)}
+          >
+            <div
+              className="app-card max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <h3 className="text-xl font-bold">이미지 상세</h3>
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
+                  >
+                    닫기
+                  </button>
+                </div>
+
+                {/* Image */}
+                <div className="relative aspect-square bg-gray-800 rounded-lg overflow-hidden">
+                  <Image
+                    src={
+                      selectedImage.data.startsWith('data:')
+                        ? selectedImage.data
+                        : `data:image/png;base64,${selectedImage.data}`
+                    }
+                    alt={selectedImage.metadata.prompt}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+
+                {/* Metadata */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">프롬프트</div>
+                    <p className="text-sm">{selectedImage.metadata.prompt}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-lg text-sm">
+                    {selectedImage.metadata.width &&
+                      selectedImage.metadata.height && (
+                        <div>
+                          <div className="text-gray-500 text-xs">해상도</div>
+                          <div className="font-medium">
+                            {selectedImage.metadata.width}×
+                            {selectedImage.metadata.height}
+                          </div>
+                        </div>
+                      )}
+                    {selectedImage.metadata.style && (
+                      <div>
+                        <div className="text-gray-500 text-xs">스타일</div>
+                        <div className="font-medium">
+                          {selectedImage.metadata.style}
+                        </div>
+                      </div>
+                    )}
+                    {selectedImage.metadata.quality && (
+                      <div>
+                        <div className="text-gray-500 text-xs">품질</div>
+                        <div className="font-medium">
+                          {selectedImage.metadata.quality}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-gray-500 text-xs">생성 시각</div>
+                      <div className="font-medium text-xs">
+                        {new Date(selectedImage.createdAt).toLocaleDateString(
+                          'ko-KR',
+                          {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          }
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  {selectedImage.tags && selectedImage.tags.length > 0 && (
+                    <div>
+                      <div className="text-sm text-gray-500 mb-2">태그</div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedImage.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-3 py-1 bg-purple-500/10 text-purple-400 rounded-full text-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Download Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() =>
+                        handleDownloadRelated(
+                          selectedImage.data,
+                          selectedImage.id,
+                          'png'
+                        )
+                      }
+                      className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      PNG 다운로드
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDownloadRelated(
+                          selectedImage.data,
+                          selectedImage.id,
+                          'jpg'
+                        )
+                      }
+                      className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      JPG 다운로드
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
