@@ -46,6 +46,62 @@ export type ImageFormat = 'png' | 'jpeg' | 'webp';
 export type QualityPreset = 'draft' | 'standard' | 'high';
 
 /**
+ * 사용 목적 타입
+ */
+export type UsageType = 'game' | 'web' | 'general';
+
+/**
+ * 레퍼런스 이미지 활용 방식
+ */
+export type ReferenceUsage =
+  | 'style' // 스타일 참조 (색감, 질감, 아트스타일)
+  | 'composition' // 구도 참조 (레이아웃, 위치)
+  | 'color-palette' // 색상 팔레트 추출
+  | 'character' // 캐릭터 일관성 (같은 캐릭터 생성)
+  | 'object' // 객체 참조 (특정 아이템/요소)
+  | 'combined'; // 복합 활용
+
+/**
+ * 레퍼런스 이미지 설정
+ */
+export interface ReferenceImageConfig {
+  images: Array<{
+    id: string;
+    file: File;
+    preview: string; // Base64 미리보기
+  }>;
+  usages: ReferenceUsage[]; // 멀티선택
+  influence: number; // 0-100 (영향력)
+  blendMode?: 'weak' | 'medium' | 'strong';
+}
+
+/**
+ * 사용 목적별 프리셋
+ */
+export interface UsageTypePreset {
+  type: UsageType;
+  name: string;
+  description: string;
+  icon: string;
+  defaults: {
+    format: ImageFormat;
+    resolution: ResolutionPreset;
+    aspectRatio: AspectRatio;
+    quality: QualityPreset;
+    colorProfile: 'sRGB' | 'Adobe RGB';
+  };
+  optimizations: {
+    transparency?: boolean;
+    tileability?: boolean;
+    spriteReady?: boolean;
+    fileSize?: 'optimized' | 'standard';
+    responsive?: boolean;
+    retina?: boolean;
+  };
+  availableStyles: ArtStyle[];
+}
+
+/**
  * 아트 스타일 프리셋
  */
 export interface ArtStylePreset {
@@ -80,7 +136,14 @@ export interface ArtGenerateRequest {
 
   // 스타일 가이드
   colorPalette?: string[]; // HEX 색상 코드 배열
-  referenceImage?: string; // Base64 또는 URL (스타일 참조용)
+  referenceImage?: string; // Base64 또는 URL (스타일 참조용) - deprecated
+
+  // 레퍼런스 이미지 (새로운 방식)
+  referenceImages?: {
+    images: string[]; // Base64 배열 (data:image/png;base64,... 형식)
+    usages: ReferenceUsage[]; // 멀티선택
+    influence: number; // 0-100
+  };
 }
 
 /**
@@ -404,5 +467,118 @@ export const QUALITY_PRESETS: Record<
     description: '최고 품질 출력',
     estimatedTime: '20-40초',
     costMultiplier: 2.0,
+  },
+};
+
+/**
+ * 레퍼런스 활용 방식 옵션
+ */
+export const REFERENCE_USAGE_OPTIONS: Record<
+  ReferenceUsage,
+  {
+    label: string;
+    description: string;
+    icon: string;
+  }
+> = {
+  style: {
+    label: '스타일 참조',
+    description: '색감, 질감, 아트스타일 참조',
+    icon: '🎨',
+  },
+  composition: {
+    label: '구도 참조',
+    description: '레이아웃, 위치 참조',
+    icon: '📐',
+  },
+  'color-palette': {
+    label: '색상 팔레트',
+    description: '색상 추출 및 적용',
+    icon: '🎨',
+  },
+  character: {
+    label: '캐릭터 일관성',
+    description: '동일 캐릭터 유지',
+    icon: '👤',
+  },
+  object: {
+    label: '객체 참조',
+    description: '특정 아이템/요소 참조',
+    icon: '🔲',
+  },
+  combined: {
+    label: '복합 활용',
+    description: '여러 요소 종합 참조',
+    icon: '✨',
+  },
+};
+
+/**
+ * 사용 목적별 프리셋 목록
+ */
+export const USAGE_TYPE_PRESETS: Record<UsageType, UsageTypePreset> = {
+  game: {
+    type: 'game',
+    name: '게임 에셋',
+    description: '게임 개발에 최적화된 설정',
+    icon: '🎮',
+    defaults: {
+      format: 'png',
+      resolution: '512x512',
+      aspectRatio: '1:1',
+      quality: 'high',
+      colorProfile: 'sRGB',
+    },
+    optimizations: {
+      transparency: true,
+      tileability: true,
+      spriteReady: true,
+    },
+    availableStyles: [
+      'pixel-art',
+      'character-design',
+      'environment',
+      'ui-icons',
+    ],
+  },
+  web: {
+    type: 'web',
+    name: '웹 콘텐츠',
+    description: '웹사이트/앱 UI에 최적화된 설정',
+    icon: '🌐',
+    defaults: {
+      format: 'webp',
+      resolution: '1920x1080',
+      aspectRatio: '16:9',
+      quality: 'standard',
+      colorProfile: 'sRGB',
+    },
+    optimizations: {
+      fileSize: 'optimized',
+      responsive: true,
+      retina: true,
+    },
+    availableStyles: ['concept-art', 'character-design', 'ui-icons'],
+  },
+  general: {
+    type: 'general',
+    name: '일반 용도',
+    description: '자유로운 창작을 위한 기본 설정',
+    icon: '🎨',
+    defaults: {
+      format: 'png',
+      resolution: '1024x1024',
+      aspectRatio: '1:1',
+      quality: 'standard',
+      colorProfile: 'sRGB',
+    },
+    optimizations: {},
+    availableStyles: [
+      'pixel-art',
+      'concept-art',
+      'character-design',
+      'environment',
+      'ui-icons',
+    ],
   },
 };

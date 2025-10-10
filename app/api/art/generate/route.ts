@@ -9,6 +9,7 @@ import type {
   ArtGenerateResponse,
   ImageMetadata,
 } from '@/lib/art/types';
+import { REFERENCE_USAGE_OPTIONS } from '@/lib/art/types';
 import {
   parseResolution,
   generateId,
@@ -88,12 +89,48 @@ export async function POST(request: NextRequest) {
     const apiUrl = `${GEMINI_IMAGE_API_URL}?key=${apiKey}`;
 
     // Gemini API 요청 형식에 맞게 변환
-    const promptText = `${body.prompt} (style: ${body.style}, quality: ${quality})`;
+    let promptText = `${body.prompt} (style: ${body.style}, quality: ${quality})`;
+
+    // 레퍼런스 이미지가 있으면 활용 방식 정보 추가
+    if (body.referenceImages && body.referenceImages.usages.length > 0) {
+      // 활용 방식의 상세 설명 생성
+      const usageDescriptions = body.referenceImages.usages
+        .map((usage) => {
+          const option = REFERENCE_USAGE_OPTIONS[usage];
+          return `${option.label} (${option.description})`;
+        })
+        .join(', ');
+
+      promptText += ` [Reference Images - Apply: ${usageDescriptions}. Influence: ${body.referenceImages.influence}%]`;
+    }
+
+    // contents parts 구성
+    const parts: Array<{
+      text?: string;
+      inlineData?: { mimeType: string; data: string };
+    }> = [];
+
+    // 레퍼런스 이미지 추가 (있는 경우)
+    if (body.referenceImages && body.referenceImages.images.length > 0) {
+      for (const imageBase64 of body.referenceImages.images) {
+        // data:image/png;base64, 프리픽스 제거
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        parts.push({
+          inlineData: {
+            mimeType: 'image/png',
+            data: base64Data,
+          },
+        });
+      }
+    }
+
+    // 텍스트 프롬프트 추가
+    parts.push({ text: promptText });
 
     const geminiRequest = {
       contents: [
         {
-          parts: [{ text: promptText }],
+          parts,
         },
       ],
       generationConfig: {

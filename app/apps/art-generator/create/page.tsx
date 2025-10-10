@@ -6,9 +6,14 @@ import { Download, Trash2, Eye } from 'lucide-react';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
+  USAGE_TYPE_PRESETS,
   type ArtStyle,
   type QualityPreset,
+  type UsageType,
+  type ReferenceImageConfig,
 } from '@/lib/art/types';
+import { UsageTypeSelector } from '@/components/art/UsageTypeSelector';
+import { ReferenceImageUploader } from '@/components/art/ReferenceImageUploader';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
@@ -52,15 +57,28 @@ interface StoredImage {
 }
 
 export default function ArtCreatePage() {
-  const { error, generatedImages, setError, removeImage } = useArtStore();
+  const {
+    error,
+    generatedImages,
+    setError,
+    removeImage,
+    addGeneratedImages,
+    startGeneration,
+  } = useArtStore();
 
   // Form state
+  const [usageType, setUsageType] = useState<UsageType>('game');
   const [style, setStyle] = useState<ArtStyle>('pixel-art');
   const [prompt, setPrompt] = useState('');
   const [resolution, setResolution] = useState('512x512');
   const [quality, setQuality] = useState<QualityPreset>('standard');
   const [batchSize, setBatchSize] = useState(1);
   const [seed, setSeed] = useState('');
+  const [referenceConfig, setReferenceConfig] = useState<ReferenceImageConfig>({
+    images: [],
+    usages: ['style'], // 기본값
+    influence: 70,
+  });
 
   // Related images state
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
@@ -68,6 +86,19 @@ export default function ArtCreatePage() {
 
   const stylePreset = ART_STYLE_PRESETS[style];
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
+
+  // UsageType 변경 시 기본값 자동 설정
+  useEffect(() => {
+    const preset = USAGE_TYPE_PRESETS[usageType];
+    setResolution(preset.defaults.resolution);
+    setQuality(preset.defaults.quality);
+
+    // 스타일이 현재 UsageType의 사용 가능한 스타일 목록에 없으면 첫 번째 스타일로 변경
+    if (!preset.availableStyles.includes(style)) {
+      setStyle(preset.availableStyles[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usageType]); // style은 의존성에서 제외 (무한 루프 방지)
 
   // 관련 이미지 로드 및 필터링
   useEffect(() => {
@@ -120,31 +151,89 @@ export default function ArtCreatePage() {
       return;
     }
 
-    // 작업 큐에 추가
+    // 레퍼런스 이미지 준비
+    const referenceImages =
+      referenceConfig.images.length > 0 && referenceConfig.usages.length > 0
+        ? {
+            images: referenceConfig.images.map((img) => img.preview),
+            usages: referenceConfig.usages,
+            influence: referenceConfig.influence,
+          }
+        : undefined;
+
+    // 레퍼런스 이미지가 있으면 localStorage 용량 문제로 즉시 생성
+    const hasReferenceImages = referenceImages !== undefined;
+
     try {
-      jobQueue.addImageJob({
-        prompt: prompt.trim(),
-        style,
-        resolution,
-        quality,
-        batchSize,
-        ...(seed && { seed: parseInt(seed, 10) }),
-      });
+      if (hasReferenceImages) {
+        // 즉시 생성 (큐 사용 안 함)
+        setError('');
+        startGeneration(); // 로딩 상태 시작
+        alert('🎨 레퍼런스 이미지를 사용하여 즉시 생성합니다...');
 
-      // 폼 초기화 (선택적)
-      setPrompt('');
-      setSeed('');
-      setError('');
+        const response = await fetch('/api/art/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey,
+          },
+          body: JSON.stringify({
+            prompt: prompt.trim(),
+            style,
+            resolution,
+            quality,
+            batchSize,
+            ...(seed && { seed: parseInt(seed, 10) }),
+            referenceImages,
+          }),
+        });
 
-      // 성공 메시지 표시
-      alert(
-        '✅ 이미지 생성 작업이 큐에 추가되었습니다.\n완료되면 알림을 받게 됩니다.'
-      );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || '이미지 생성 실패');
+        }
+
+        const data = await response.json();
+
+        // 생성된 이미지를 스토어에 추가
+        if (data.images && Array.isArray(data.images)) {
+          addGeneratedImages(data);
+          alert(`✅ ${data.images.length}개 이미지 생성 완료!`);
+        }
+
+        // 폼 초기화
+        setPrompt('');
+        setSeed('');
+        setReferenceConfig({
+          images: [],
+          usages: ['style'],
+          influence: 70,
+        });
+      } else {
+        // 작업 큐에 추가 (레퍼런스 이미지 없을 때)
+        jobQueue.addImageJob({
+          prompt: prompt.trim(),
+          style,
+          resolution,
+          quality,
+          batchSize,
+          ...(seed && { seed: parseInt(seed, 10) }),
+        });
+
+        // 폼 초기화
+        setPrompt('');
+        setSeed('');
+        setError('');
+
+        alert(
+          '✅ 이미지 생성 작업이 큐에 추가되었습니다.\n완료되면 알림을 받게 됩니다.'
+        );
+      }
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : '작업 큐 추가 중 오류가 발생했습니다';
+          : '이미지 생성 중 오류가 발생했습니다';
       setError(errorMessage);
     }
   };
@@ -191,6 +280,9 @@ export default function ArtCreatePage() {
 
         {/* Generation Form */}
         <div className="app-card p-6 md:p-8 space-y-6">
+          {/* Usage Type Selection */}
+          <UsageTypeSelector value={usageType} onChange={setUsageType} />
+
           {/* Style Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -201,16 +293,28 @@ export default function ArtCreatePage() {
               onChange={(e) => setStyle(e.target.value as ArtStyle)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              {Object.entries(ART_STYLE_PRESETS).map(([key, preset]) => (
-                <option key={key} value={key}>
-                  {preset.icon} {preset.name}
-                </option>
-              ))}
+              {Object.entries(ART_STYLE_PRESETS)
+                .filter(([key]) =>
+                  USAGE_TYPE_PRESETS[usageType].availableStyles.includes(
+                    key as ArtStyle
+                  )
+                )
+                .map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.icon} {preset.name}
+                  </option>
+                ))}
             </select>
             <p className="mt-2 text-xs text-gray-500">
               {stylePreset.description}
             </p>
           </div>
+
+          {/* Reference Images */}
+          <ReferenceImageUploader
+            value={referenceConfig}
+            onChange={setReferenceConfig}
+          />
 
           {/* Prompt */}
           <div>
