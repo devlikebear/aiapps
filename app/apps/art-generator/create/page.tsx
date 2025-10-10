@@ -10,8 +10,10 @@ import {
   type ArtStyle,
   type QualityPreset,
   type UsageType,
+  type ReferenceImageConfig,
 } from '@/lib/art/types';
 import { UsageTypeSelector } from '@/components/art/UsageTypeSelector';
+import { ReferenceImageUploader } from '@/components/art/ReferenceImageUploader';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
@@ -65,6 +67,10 @@ export default function ArtCreatePage() {
   const [quality, setQuality] = useState<QualityPreset>('standard');
   const [batchSize, setBatchSize] = useState(1);
   const [seed, setSeed] = useState('');
+  const [referenceConfig, setReferenceConfig] = useState<ReferenceImageConfig>({
+    images: [],
+    influence: 70,
+  });
 
   // Related images state
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
@@ -139,6 +145,16 @@ export default function ArtCreatePage() {
 
     // 작업 큐에 추가
     try {
+      // 레퍼런스 이미지 Base64 변환
+      const referenceImages =
+        referenceConfig.images.length > 0
+          ? {
+              images: referenceConfig.images.map((img) => img.preview),
+              usage: referenceConfig.images[0].usage,
+              influence: referenceConfig.influence,
+            }
+          : undefined;
+
       jobQueue.addImageJob({
         prompt: prompt.trim(),
         style,
@@ -146,6 +162,7 @@ export default function ArtCreatePage() {
         quality,
         batchSize,
         ...(seed && { seed: parseInt(seed, 10) }),
+        ...(referenceImages && { referenceImages }),
       });
 
       // 폼 초기화 (선택적)
@@ -237,6 +254,12 @@ export default function ArtCreatePage() {
               {stylePreset.description}
             </p>
           </div>
+
+          {/* Reference Images */}
+          <ReferenceImageUploader
+            value={referenceConfig}
+            onChange={setReferenceConfig}
+          />
 
           {/* Prompt */}
           <div>
