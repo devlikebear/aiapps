@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Download, Trash2, Eye } from 'lucide-react';
+import { Download, Trash2, Eye, Wand2 } from 'lucide-react';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
@@ -14,11 +14,25 @@ import {
 } from '@/lib/art/types';
 import { UsageTypeSelector } from '@/components/art/UsageTypeSelector';
 import { ReferenceImageUploader } from '@/components/art/ReferenceImageUploader';
+import { AssetTypeSelector } from '@/components/art/AssetTypeSelector';
+import { CharacterPromptForm } from '@/components/art/CharacterPromptForm';
+import { ItemPromptForm } from '@/components/art/ItemPromptForm';
+import { EnvironmentPromptForm } from '@/components/art/EnvironmentPromptForm';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
 import { getAllImages } from '@/lib/storage/indexed-db';
 import { generateImageTags } from '@/lib/utils/tags';
+import { PromptBuilder, type PromptPreset } from '@/lib/art/prompt-builder';
+import {
+  DEFAULT_CHARACTER_PRESET,
+  type CharacterPreset,
+} from '@/lib/art/presets/character';
+import { DEFAULT_ITEM_PRESET, type ItemPreset } from '@/lib/art/presets/item';
+import {
+  DEFAULT_ENVIRONMENT_PRESET,
+  type EnvironmentPreset,
+} from '@/lib/art/presets/environment';
 
 const RESOLUTIONS = [
   { label: '256×256', value: '256x256' },
@@ -79,6 +93,42 @@ export default function ArtCreatePage() {
     usages: ['style'], // 기본값
     influence: 70,
   });
+
+  // Prompt Builder state
+  const [promptMode, setPromptMode] = useState<'manual' | 'builder'>('manual');
+  const [assetType, setAssetType] = useState<
+    'character' | 'item' | 'environment'
+  >('character');
+  const [characterPreset, setCharacterPreset] = useState<CharacterPreset>(
+    DEFAULT_CHARACTER_PRESET
+  );
+  const [itemPreset, setItemPreset] = useState<ItemPreset>(DEFAULT_ITEM_PRESET);
+  const [environmentPreset, setEnvironmentPreset] = useState<EnvironmentPreset>(
+    DEFAULT_ENVIRONMENT_PRESET
+  );
+
+  // 프롬프트 빌더에서 프롬프트 생성
+  const buildPromptFromPreset = () => {
+    let preset: PromptPreset;
+    if (assetType === 'character') {
+      preset = characterPreset;
+    } else if (assetType === 'item') {
+      preset = itemPreset;
+    } else {
+      preset = environmentPreset;
+    }
+
+    const generatedPrompt = PromptBuilder.buildPrompt(preset);
+    setPrompt(generatedPrompt);
+  };
+
+  // 에셋 타입 변경 시 자동으로 프롬프트 생성
+  useEffect(() => {
+    if (promptMode === 'builder') {
+      buildPromptFromPreset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetType, characterPreset, itemPreset, environmentPreset, promptMode]);
 
   // Related images state
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
@@ -316,18 +366,104 @@ export default function ArtCreatePage() {
             onChange={setReferenceConfig}
           />
 
-          {/* Prompt */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              프롬프트 <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={`예: ${stylePreset.examples[0]}`}
-              rows={4}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-            />
+          {/* Prompt Section */}
+          <div className="space-y-4">
+            {/* Mode Toggle */}
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium">
+                프롬프트 <span className="text-red-400">*</span>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPromptMode('manual')}
+                  className={`
+                    px-3 py-1 rounded text-xs transition-all
+                    ${
+                      promptMode === 'manual'
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                    }
+                  `}
+                >
+                  ✍️ 직접 입력
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPromptMode('builder');
+                    buildPromptFromPreset();
+                  }}
+                  className={`
+                    px-3 py-1 rounded text-xs transition-all flex items-center gap-1
+                    ${
+                      promptMode === 'builder'
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                    }
+                  `}
+                >
+                  <Wand2 className="w-3 h-3" />
+                  프리셋 빌더
+                </button>
+              </div>
+            </div>
+
+            {/* Builder Mode */}
+            {promptMode === 'builder' && (
+              <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700 space-y-4">
+                {/* Asset Type Selector */}
+                <AssetTypeSelector value={assetType} onChange={setAssetType} />
+
+                {/* Dynamic Form based on Asset Type */}
+                {assetType === 'character' && (
+                  <CharacterPromptForm
+                    value={characterPreset}
+                    onChange={setCharacterPreset}
+                  />
+                )}
+                {assetType === 'item' && (
+                  <ItemPromptForm value={itemPreset} onChange={setItemPreset} />
+                )}
+                {assetType === 'environment' && (
+                  <EnvironmentPromptForm
+                    value={environmentPreset}
+                    onChange={setEnvironmentPreset}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Generated/Manual Prompt Preview */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-gray-400">
+                  {promptMode === 'builder'
+                    ? '생성된 프롬프트 (수정 가능)'
+                    : '프롬프트'}
+                </label>
+                {promptMode === 'builder' && (
+                  <button
+                    type="button"
+                    onClick={buildPromptFromPreset}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    🔄 프롬프트 재생성
+                  </button>
+                )}
+              </div>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={
+                  promptMode === 'manual'
+                    ? `예: ${stylePreset.examples[0]}`
+                    : '프리셋을 설정하면 자동으로 프롬프트가 생성됩니다'
+                }
+                rows={promptMode === 'builder' ? 3 : 4}
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              />
+            </div>
           </div>
 
           {/* Resolution & Quality */}
