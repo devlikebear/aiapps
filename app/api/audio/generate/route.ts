@@ -4,6 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Node.js 런타임 사용 (WebSocket 지원)
+export const runtime = 'nodejs';
 import { LyriaClient } from '@/lib/ai';
 import type { AudioGenerateRequest, AudioMetadata } from '@/lib/audio/types';
 import { GAME_PRESETS } from '@/lib/audio/types';
