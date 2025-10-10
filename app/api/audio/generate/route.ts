@@ -8,23 +8,39 @@ import { NextRequest, NextResponse } from 'next/server';
 // Node.js 런타임 사용 (WebSocket 지원)
 export const runtime = 'nodejs';
 import { LyriaClient } from '@/lib/ai';
-import type { AudioGenerateRequest, AudioMetadata } from '@/lib/audio/types';
+import type { AudioMetadata, GameGenre } from '@/lib/audio/types';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import { pcmToWav } from '@/lib/audio/converter';
+import { rateLimiters, checkRateLimit } from '@/lib/middleware/rate-limit';
+import {
+  audioGenerateRequestSchema,
+  validateRequest,
+} from '@/lib/validation/schemas';
+import { validateGeminiApiKeyFormat } from '@/lib/api-key/validation';
 
 export async function POST(request: NextRequest) {
-  try {
-    const body: AudioGenerateRequest = await request.json();
+  // Rate Limiting 검사
+  const rateLimitResponse = await checkRateLimit(
+    request,
+    rateLimiters.generation
+  );
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
 
-    // 입력 검증
-    if (!body.prompt || !body.genre || !body.type) {
+  try {
+    const body = await request.json();
+
+    // Zod 스키마 기반 입력 검증
+    const validation = validateRequest(audioGenerateRequestSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: prompt, genre, type' },
+        { error: 'Invalid request', details: validation.error },
         { status: 400 }
       );
     }
 
-    // API 키를 헤더에서 가져오기
+    // API 키 검증
     const apiKey = request.headers.get('X-API-Key');
     if (!apiKey) {
       return NextResponse.json(
@@ -35,21 +51,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 게임 프리셋 가져오기
-    const preset = GAME_PRESETS[body.genre];
+    // API 키 형식 검증
+    const keyValidation = validateGeminiApiKeyFormat(apiKey);
+    if (!keyValidation.valid) {
+      return NextResponse.json(
+        {
+          error: keyValidation.error,
+          details: keyValidation.details,
+        },
+        { status: 401 }
+      );
+    }
+
+    // 검증된 데이터 사용
+    const validatedBody = validation.data;
+
+    // 게임 프리셋 가져오기 (타입 안전성)
+    const genre = validatedBody.genre as GameGenre;
+    const preset = GAME_PRESETS[genre];
     if (!preset) {
       return NextResponse.json({ error: 'Invalid genre' }, { status: 400 });
     }
 
     // Lyria 요청 파라미터 구성
-    const bpm = body.bpm || preset.bpm.default;
+    const bpm = validatedBody.bpm || preset.bpm.default;
     const density = body.density ?? preset.density;
     const brightness = body.brightness ?? preset.brightness;
     const scale = body.scale || preset.scale;
-    const duration = body.duration || (body.type === 'bgm' ? 60 : 5);
+    const duration =
+      validatedBody.duration || (validatedBody.type === 'bgm' ? 60 : 5);
 
     // 프롬프트 템플릿 적용
-    const enhancedPrompt = preset.promptTemplate.replace('{mood}', body.prompt);
+    const enhancedPrompt = preset.promptTemplate.replace(
+      '{mood}',
+      validatedBody.prompt
+    );
 
     // Lyria 클라이언트 생성
     const client = new LyriaClient({ apiKey });
@@ -77,8 +113,8 @@ export async function POST(request: NextRequest) {
       // 메타데이터 생성
       const metadata: AudioMetadata = {
         id: result.requestId,
-        type: body.type,
-        genre: body.genre,
+        type: validatedBody.type,
+        genre,
         format: 'wav',
         duration: result.metadata.duration,
         fileSize: wavData.byteLength,
@@ -88,7 +124,7 @@ export async function POST(request: NextRequest) {
         bpm: result.metadata.bpm,
         key: result.metadata.key,
         scale: result.metadata.scale,
-        prompt: body.prompt,
+        prompt: validatedBody.prompt,
         createdAt: result.generatedAt,
         isCompressed: false,
       };

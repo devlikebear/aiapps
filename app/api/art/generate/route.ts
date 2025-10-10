@@ -15,6 +15,7 @@ import {
   estimateGenerationCost,
   calculateAspectRatio,
 } from '@/lib/art/utils';
+import { rateLimiters, checkRateLimit } from '@/lib/middleware/rate-limit';
 
 // Gemini 2.5 Flash Image API 설정
 const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
@@ -25,6 +26,15 @@ const GEMINI_IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/m
  * 이미지 생성 요청 처리
  */
 export async function POST(request: NextRequest) {
+  // Rate Limiting 검사
+  const rateLimitResponse = await checkRateLimit(
+    request,
+    rateLimiters.generation
+  );
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     // 요청 본문 파싱
     const body: ArtGenerateRequest = await request.json();
