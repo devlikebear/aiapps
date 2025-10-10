@@ -7,18 +7,10 @@ import type { GameGenre, AudioType } from '@/lib/audio/types';
 import AudioPlayer from '@/components/audio/AudioPlayer';
 import { downloadAudio } from '@/lib/audio/converter';
 import { getApiKey } from '@/lib/api-key/storage';
+import { jobQueue } from '@/lib/queue';
 
 export default function AudioCreatePage() {
-  const {
-    isGenerating,
-    progress,
-    error,
-    currentAudio,
-    startGeneration,
-    setGeneratedAudio,
-    setError,
-    completeGeneration,
-  } = useAudioStore();
+  const { error, currentAudio, setError } = useAudioStore();
 
   // Form state
   const [type, setType] = useState<AudioType>('bgm');
@@ -48,40 +40,32 @@ export default function AudioCreatePage() {
       return;
     }
 
-    startGeneration();
-
+    // 작업 큐에 추가
     try {
-      const response = await fetch('/api/audio/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-        },
-        body: JSON.stringify({
-          type,
-          genre,
-          prompt: prompt.trim(),
-          duration,
-          bpm: customBpm || preset.bpm.default,
-        }),
+      jobQueue.addAudioJob({
+        prompt: prompt.trim(),
+        genre,
+        audioType: type,
+        bpm: customBpm || preset.bpm.default,
+        duration,
+        density: preset.density,
+        brightness: preset.brightness,
+        scale: preset.scale,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '오디오 생성에 실패했습니다');
-      }
+      // 폼 초기화 (선택적)
+      setPrompt('');
+      setError('');
 
-      const data = await response.json();
-      const audioBuffer = Uint8Array.from(atob(data.audio), (c) =>
-        c.charCodeAt(0)
-      ).buffer;
-      setGeneratedAudio(audioBuffer, data.metadata);
-      completeGeneration();
+      // 성공 메시지 표시 (토스트가 알려주지만 추가 피드백)
+      alert(
+        '✅ 오디오 생성 작업이 큐에 추가되었습니다.\n완료되면 알림을 받게 됩니다.'
+      );
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : '오디오 생성 중 오류가 발생했습니다';
+          : '작업 큐 추가 중 오류가 발생했습니다';
       setError(errorMessage);
     }
   };
@@ -121,7 +105,6 @@ export default function AudioCreatePage() {
                 value={type}
                 onChange={(e) => setType(e.target.value as AudioType)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isGenerating}
               >
                 <option value="bgm">🎼 배경 음악 (BGM)</option>
                 <option value="sfx">⚡ 효과음 (SFX)</option>
@@ -142,7 +125,6 @@ export default function AudioCreatePage() {
                 value={genre}
                 onChange={(e) => setGenre(e.target.value as GameGenre)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isGenerating}
               >
                 {Object.entries(GAME_PRESETS).map(([key, preset]) => (
                   <option key={key} value={key}>
@@ -169,7 +151,6 @@ export default function AudioCreatePage() {
               }
               rows={4}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              disabled={isGenerating}
             />
           </div>
 
@@ -187,7 +168,6 @@ export default function AudioCreatePage() {
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
                 className="w-full"
-                disabled={isGenerating}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>{type === 'bgm' ? '30초' : '1초'}</span>
@@ -207,7 +187,6 @@ export default function AudioCreatePage() {
                 value={customBpm || preset.bpm.default}
                 onChange={(e) => setCustomBpm(Number(e.target.value))}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isGenerating}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Min: {preset.bpm.min}</span>
@@ -247,17 +226,10 @@ export default function AudioCreatePage() {
           {/* Generate Button */}
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
+            disabled={!prompt.trim()}
             className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            {isGenerating ? (
-              <span className="flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                생성 중... {progress?.progress || 0}%
-              </span>
-            ) : (
-              '🎵 오디오 생성하기'
-            )}
+            🎵 작업 큐에 추가하기
           </button>
         </div>
 

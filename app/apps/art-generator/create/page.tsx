@@ -11,6 +11,7 @@ import {
 } from '@/lib/art/types';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
+import { jobQueue } from '@/lib/queue';
 
 const RESOLUTIONS = [
   { label: '256×256', value: '256x256' },
@@ -34,16 +35,7 @@ const QUALITY_PRESETS: Array<{
 ];
 
 export default function ArtCreatePage() {
-  const {
-    isGenerating,
-    generationProgress,
-    error,
-    generatedImages,
-    setError,
-    startGeneration,
-    addGeneratedImages,
-    removeImage,
-  } = useArtStore();
+  const { error, generatedImages, setError, removeImage } = useArtStore();
 
   // Form state
   const [style, setStyle] = useState<ArtStyle>('pixel-art');
@@ -70,37 +62,31 @@ export default function ArtCreatePage() {
       return;
     }
 
-    startGeneration();
-
+    // 작업 큐에 추가
     try {
-      const response = await fetch('/api/art/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-        },
-        body: JSON.stringify({
-          style,
-          prompt: prompt.trim(),
-          resolution,
-          quality,
-          batchSize,
-          ...(seed && { seed: parseInt(seed, 10) }),
-        }),
+      jobQueue.addImageJob({
+        prompt: prompt.trim(),
+        style,
+        resolution,
+        quality,
+        batchSize,
+        ...(seed && { seed: parseInt(seed, 10) }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '이미지 생성에 실패했습니다');
-      }
+      // 폼 초기화 (선택적)
+      setPrompt('');
+      setSeed('');
+      setError('');
 
-      const data = await response.json();
-      addGeneratedImages(data);
+      // 성공 메시지 표시
+      alert(
+        '✅ 이미지 생성 작업이 큐에 추가되었습니다.\n완료되면 알림을 받게 됩니다.'
+      );
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : '이미지 생성 중 오류가 발생했습니다';
+          : '작업 큐 추가 중 오류가 발생했습니다';
       setError(errorMessage);
     }
   };
@@ -139,7 +125,6 @@ export default function ArtCreatePage() {
               value={style}
               onChange={(e) => setStyle(e.target.value as ArtStyle)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              disabled={isGenerating}
             >
               {Object.entries(ART_STYLE_PRESETS).map(([key, preset]) => (
                 <option key={key} value={key}>
@@ -163,7 +148,6 @@ export default function ArtCreatePage() {
               placeholder={`예: ${stylePreset.examples[0]}`}
               rows={4}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-              disabled={isGenerating}
             />
           </div>
 
@@ -176,7 +160,6 @@ export default function ArtCreatePage() {
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                disabled={isGenerating}
               >
                 {RESOLUTIONS.map((res) => (
                   <option key={res.value} value={res.value}>
@@ -196,7 +179,6 @@ export default function ArtCreatePage() {
                 value={quality}
                 onChange={(e) => setQuality(e.target.value as QualityPreset)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                disabled={isGenerating}
               >
                 {QUALITY_PRESETS.map((q) => (
                   <option key={q.value} value={q.value}>
@@ -221,7 +203,6 @@ export default function ArtCreatePage() {
                 value={batchSize}
                 onChange={(e) => setBatchSize(Number(e.target.value))}
                 className="w-full"
-                disabled={isGenerating}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>1개</span>
@@ -240,7 +221,6 @@ export default function ArtCreatePage() {
                 onChange={(e) => setSeed(e.target.value)}
                 placeholder="랜덤"
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                disabled={isGenerating}
               />
               <p className="mt-1 text-xs text-gray-500">
                 동일한 시드로 재현 가능한 이미지 생성
@@ -275,17 +255,10 @@ export default function ArtCreatePage() {
           {/* Generate Button */}
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
+            disabled={!prompt.trim()}
             className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            {isGenerating ? (
-              <span className="flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                생성 중... {generationProgress}%
-              </span>
-            ) : (
-              '🎨 이미지 생성하기'
-            )}
+            🎨 작업 큐에 추가하기
           </button>
         </div>
 
