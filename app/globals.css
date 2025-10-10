@@ -83,6 +83,37 @@
 }
 
 @layer utilities {
+  /* Responsive utilities */
+  .container-responsive {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+    max-width: 1280px;
+  }
+
+  .grid-responsive {
+    @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+    @apply inline-flex items-center justify-center;
+  }
+
+  /* Mobile-first breakpoints */
+  @media (max-width: 767px) {
+    .mobile-full-width {
+      @apply w-full;
+    }
+
+    .mobile-text-center {
+      @apply text-center;
+    }
+
+    .mobile-stack {
+      @apply flex-col;
+    }
+  }
+
   /* Accessibility utilities */
   .sr-only {
     position: absolute;
