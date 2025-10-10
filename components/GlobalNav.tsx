@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Music, ImageIcon, Library } from 'lucide-react';
@@ -32,7 +32,7 @@ const APPS: App[] = [
   },
 ];
 
-export default function GlobalNav() {
+function GlobalNav() {
   const pathname = usePathname();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [hasKey, setHasKey] = useState(false);
@@ -43,13 +43,22 @@ export default function GlobalNav() {
     setHasKey(hasApiKey('gemini'));
   }, [isSettingsOpen]);
 
-  const filteredApps = APPS.filter(
-    (app) =>
-      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.description.toLowerCase().includes(searchQuery.toLowerCase())
+  // 필터링된 앱 목록 (useMemo로 메모이제이션)
+  const filteredApps = useMemo(
+    () =>
+      APPS.filter(
+        (app) =>
+          app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          app.description.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [searchQuery]
   );
 
-  const isActive = (path: string) => pathname?.startsWith(path);
+  // isActive 함수 (useCallback으로 메모이제이션)
+  const isActive = useCallback(
+    (path: string) => pathname?.startsWith(path),
+    [pathname]
+  );
 
   return (
     <>
@@ -324,3 +333,6 @@ export default function GlobalNav() {
     </>
   );
 }
+
+// React.memo로 컴포넌트 메모이제이션
+export default memo(GlobalNav);

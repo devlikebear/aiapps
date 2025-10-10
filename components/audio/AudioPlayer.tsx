@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useAudioStore } from '@/lib/stores/audio-store';
 
-export default function AudioPlayer() {
+function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
 
@@ -92,26 +92,35 @@ export default function AudioPlayer() {
     audio.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
 
-  // 시간 이동
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!progressBarRef.current || !audioRef.current) return;
+  // 시간 이동 (useCallback으로 메모이제이션)
+  const handleProgressClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!progressBarRef.current || !audioRef.current) return;
 
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = percentage * duration;
+      const rect = progressBarRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      const newTime = percentage * duration;
 
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    },
+    [duration, setCurrentTime]
+  );
 
-  // 시간 포맷팅
-  const formatTime = (seconds: number): string => {
+  // 시간 포맷팅 (useCallback으로 메모이제이션)
+  const formatTime = useCallback((seconds: number): string => {
     if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, []);
+
+  // progress 계산 (useMemo로 메모이제이션) - early return 전에 위치해야 함
+  const progress = useMemo(
+    () => (duration > 0 ? (currentTime / duration) * 100 : 0),
+    [currentTime, duration]
+  );
 
   if (!currentAudio) {
     return (
@@ -121,8 +130,6 @@ export default function AudioPlayer() {
       </div>
     );
   }
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="app-card space-y-6">
@@ -230,3 +237,6 @@ export default function AudioPlayer() {
     </div>
   );
 }
+
+// React.memo로 컴포넌트 메모이제이션
+export default memo(AudioPlayer);
