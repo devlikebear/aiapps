@@ -20,8 +20,11 @@ export function DynamicPresetForm({
   schema,
   onChange,
 }: DynamicPresetFormProps) {
+  // groups가 undefined일 경우를 대비한 정규화
+  const groups = schema.groups || [];
+
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(schema.groups.map((g) => g.id))
+    new Set(groups.map((g) => g.id))
   );
 
   const toggleGroup = (groupId: string) => {
@@ -43,7 +46,7 @@ export function DynamicPresetForm({
   ) => {
     const updatedSchema: PresetBuilderSchema = {
       ...schema,
-      groups: schema.groups.map((group) => {
+      groups: groups.map((group) => {
         if (group.id === groupId) {
           return {
             ...group,
@@ -60,7 +63,7 @@ export function DynamicPresetForm({
 
   return (
     <div className="space-y-4">
-      {schema.groups
+      {groups
         .sort((a, b) => a.order - b.order)
         .map((group) => (
           <div
