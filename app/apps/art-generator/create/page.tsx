@@ -18,6 +18,7 @@ import { AssetTypeSelector } from '@/components/art/AssetTypeSelector';
 import { CharacterPromptForm } from '@/components/art/CharacterPromptForm';
 import { ItemPromptForm } from '@/components/art/ItemPromptForm';
 import { EnvironmentPromptForm } from '@/components/art/EnvironmentPromptForm';
+import { ThemeSelector } from '@/components/art/ThemeSelector';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
@@ -33,6 +34,7 @@ import {
   DEFAULT_ENVIRONMENT_PRESET,
   type EnvironmentPreset,
 } from '@/lib/art/presets/environment';
+import type { PromptTheme } from '@/lib/art/prompt-theme';
 
 const RESOLUTIONS = [
   { label: '256×256', value: '256x256' },
@@ -82,7 +84,38 @@ export default function ArtCreatePage() {
 
   // Form state
   const [usageType, setUsageType] = useState<UsageType>('game');
+  const [currentTheme, setCurrentTheme] = useState<PromptTheme | null>(null);
+  const [availableArtStyles, setAvailableArtStyles] = useState<
+    Array<{ value: ArtStyle; label: string; description: string }>
+  >([]);
   const [style, setStyle] = useState<ArtStyle>('pixel-art');
+
+  // Handle theme change
+  const handleThemeChange = (theme: PromptTheme) => {
+    setCurrentTheme(theme);
+    setAvailableArtStyles(theme.artStyles);
+
+    // Update style to first available in new theme
+    if (theme.artStyles.length > 0) {
+      setStyle(theme.artStyles[0].value);
+    }
+
+    // Update preset builders
+    if (theme.presetBuilders.character) {
+      setCharacterPreset(theme.presetBuilders.character);
+    }
+    if (theme.presetBuilders.item) {
+      setItemPreset(theme.presetBuilders.item);
+    }
+    if (theme.presetBuilders.environment) {
+      setEnvironmentPreset(theme.presetBuilders.environment);
+    }
+
+    // Rebuild prompt if in builder mode
+    if (promptMode === 'builder') {
+      buildPromptFromPreset();
+    }
+  };
   const [prompt, setPrompt] = useState('');
   const [resolution, setResolution] = useState('512x512');
   const [quality, setQuality] = useState<QualityPreset>('standard');
@@ -134,10 +167,20 @@ export default function ArtCreatePage() {
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
 
-  const stylePreset = ART_STYLE_PRESETS[style];
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
 
-  // UsageType 변경 시 기본값 자동 설정
+  // 현재 선택된 스타일의 정보 가져오기
+  const currentStyleInfo = availableArtStyles.find((s) => s.value === style);
+  const stylePreset = ART_STYLE_PRESETS[style] || {
+    name: currentStyleInfo?.label || '알 수 없음',
+    icon: '🎨',
+    description: currentStyleInfo?.description || '',
+    examples: [''],
+    recommendedResolution: '512x512',
+    aspectRatio: '1:1',
+  };
+
+  // UsageType 변경 시 기본값 자동 설정 (테마 시스템으로 대체됨)
   useEffect(() => {
     const preset = USAGE_TYPE_PRESETS[usageType];
     setResolution(preset.defaults.resolution);
@@ -333,6 +376,22 @@ export default function ArtCreatePage() {
           {/* Usage Type Selection */}
           <UsageTypeSelector value={usageType} onChange={setUsageType} />
 
+          {/* Theme Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              프롬프트 테마
+            </label>
+            <ThemeSelector
+              usageType={usageType}
+              selectedThemeId={currentTheme?.id}
+              onThemeChange={handleThemeChange}
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              {currentTheme?.description ||
+                '사용 목적에 맞는 테마를 선택하세요'}
+            </p>
+          </div>
+
           {/* Style Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -342,21 +401,21 @@ export default function ArtCreatePage() {
               value={style}
               onChange={(e) => setStyle(e.target.value as ArtStyle)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              disabled={availableArtStyles.length === 0}
             >
-              {Object.entries(ART_STYLE_PRESETS)
-                .filter(([key]) =>
-                  USAGE_TYPE_PRESETS[usageType].availableStyles.includes(
-                    key as ArtStyle
-                  )
-                )
-                .map(([key, preset]) => (
-                  <option key={key} value={key}>
-                    {preset.icon} {preset.name}
+              {availableArtStyles.length > 0 ? (
+                availableArtStyles.map((artStyle) => (
+                  <option key={artStyle.value} value={artStyle.value}>
+                    {artStyle.label}
                   </option>
-                ))}
+                ))
+              ) : (
+                <option value="">테마를 먼저 선택하세요</option>
+              )}
             </select>
             <p className="mt-2 text-xs text-gray-500">
-              {stylePreset.description}
+              {availableArtStyles.find((s) => s.value === style)?.description ||
+                '아트 스타일을 선택하세요'}
             </p>
           </div>
 
