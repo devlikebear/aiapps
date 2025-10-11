@@ -106,8 +106,10 @@ export function ThemeManagementModal({
       icon: theme.icon || '🎨',
       selectedStyles: theme.artStyles.map((s) => s.value),
     });
-    // 기존 테마의 프리셋 빌더 로드
-    setPresetBuilders(theme.presetBuilders);
+    // 기존 테마의 프리셋 빌더 로드 (배열로 보장)
+    setPresetBuilders(
+      Array.isArray(theme.presetBuilders) ? theme.presetBuilders : []
+    );
     setEditingPresetIndex(null);
   };
 

@@ -7,6 +7,7 @@ import type {
   CreateThemeInput,
   UpdateThemeInput,
 } from './prompt-theme';
+import type { PresetBuilderSchema } from './preset-builder-schema';
 import { DEFAULT_THEMES } from './default-themes';
 
 const DB_NAME = 'aiapps-prompt-themes';
@@ -71,6 +72,40 @@ export async function initializeDefaultThemes(): Promise<void> {
 }
 
 /**
+ * presetBuilders를 객체에서 배열로 마이그레이션
+ */
+function migratePresetBuilders(theme: any): PromptTheme {
+  // presetBuilders가 이미 배열이면 그대로 반환
+  if (Array.isArray(theme.presetBuilders)) {
+    return theme as PromptTheme;
+  }
+
+  // 객체 형태인 경우 배열로 변환
+  const presetBuilders: PresetBuilderSchema[] = [];
+
+  if (theme.presetBuilders && typeof theme.presetBuilders === 'object') {
+    // 이전 객체 구조: { character?: ..., item?: ..., environment?: ... }
+    const oldPresets = theme.presetBuilders as any;
+
+    // 각 프리셋을 배열에 추가 (존재하는 것만)
+    if (oldPresets.character) {
+      presetBuilders.push(oldPresets.character);
+    }
+    if (oldPresets.item) {
+      presetBuilders.push(oldPresets.item);
+    }
+    if (oldPresets.environment) {
+      presetBuilders.push(oldPresets.environment);
+    }
+  }
+
+  return {
+    ...theme,
+    presetBuilders,
+  } as PromptTheme;
+}
+
+/**
  * 모든 테마 가져오기
  */
 export async function getAllThemes(): Promise<PromptTheme[]> {
@@ -80,7 +115,12 @@ export async function getAllThemes(): Promise<PromptTheme[]> {
 
   return new Promise((resolve, reject) => {
     const request = store.getAll();
-    request.onsuccess = () => resolve(request.result || []);
+    request.onsuccess = () => {
+      const themes = request.result || [];
+      // 마이그레이션 적용
+      const migratedThemes = themes.map(migratePresetBuilders);
+      resolve(migratedThemes);
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -97,7 +137,11 @@ export async function getThemeById(
 
   return new Promise((resolve, reject) => {
     const request = store.get(id);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const theme = request.result;
+      // 마이그레이션 적용
+      resolve(theme ? migratePresetBuilders(theme) : undefined);
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -115,7 +159,12 @@ export async function getThemesByUsageType(
 
   return new Promise((resolve, reject) => {
     const request = index.getAll(usageType);
-    request.onsuccess = () => resolve(request.result || []);
+    request.onsuccess = () => {
+      const themes = request.result || [];
+      // 마이그레이션 적용
+      const migratedThemes = themes.map(migratePresetBuilders);
+      resolve(migratedThemes);
+    };
     request.onerror = () => reject(request.error);
   });
 }
