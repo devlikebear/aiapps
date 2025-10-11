@@ -464,8 +464,8 @@ export default function ArtCreatePage() {
                     }
                   >
                     {currentTheme && currentTheme.presetBuilders.length > 0 ? (
-                      currentTheme.presetBuilders.map((preset) => (
-                        <option key={preset.id} value={preset.id}>
+                      currentTheme.presetBuilders.map((preset, index) => (
+                        <option key={`${preset.id}-${index}`} value={preset.id}>
                           {preset.icon || '📦'} {preset.name}
                         </option>
                       ))
