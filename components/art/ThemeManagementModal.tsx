@@ -516,42 +516,41 @@ export function ThemeManagementModal({
                         key={preset.id}
                         className="border border-gray-700 rounded-lg overflow-hidden"
                       >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditingPresetIndex(
-                              editingPresetIndex === index ? null : index
-                            )
-                          }
-                          className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors"
-                        >
-                          <span className="font-medium">
-                            {preset.icon || '📦'} {preset.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPresetBuilders(
-                                  presetBuilders.filter((_, i) => i !== index)
-                                );
-                                if (editingPresetIndex === index) {
-                                  setEditingPresetIndex(null);
-                                }
-                              }}
-                              className="p-1 hover:bg-red-500/20 text-red-400 rounded transition-colors"
-                              title="삭제"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                        <div className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingPresetIndex(
+                                editingPresetIndex === index ? null : index
+                              )
+                            }
+                            className="flex-1 flex items-center gap-2 text-left hover:text-purple-400 transition-colors"
+                          >
+                            <span className="font-medium">
+                              {preset.icon || '📦'} {preset.name}
+                            </span>
                             {editingPresetIndex === index ? (
                               <ChevronUp className="w-5 h-5" />
                             ) : (
                               <ChevronDown className="w-5 h-5" />
                             )}
-                          </div>
-                        </button>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPresetBuilders(
+                                presetBuilders.filter((_, i) => i !== index)
+                              );
+                              if (editingPresetIndex === index) {
+                                setEditingPresetIndex(null);
+                              }
+                            }}
+                            className="p-1 hover:bg-red-500/20 text-red-400 rounded transition-colors ml-2"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                         {editingPresetIndex === index && (
                           <div className="p-4 bg-gray-900/50 border-t border-gray-700">
                             <PresetBuilderEditor
