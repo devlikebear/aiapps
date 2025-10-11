@@ -16,7 +16,7 @@ import { generateId } from '@/lib/art/utils';
 
 // Gemini 2.5 Flash Image API 설정
 const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
-const GEMINI_EDIT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:editImage`;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
 
 interface ImageEditRequest {
   imageData: string; // base64 encoded image
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Gemini API 호출
-    const apiUrl = `${GEMINI_EDIT_API_URL}?key=${apiKey}`;
+    const apiUrl = `${GEMINI_API_URL}?key=${apiKey}`;
 
     // data:image/png;base64, 프리픽스 제거
     const base64Image = body.imageData.replace(/^data:image\/\w+;base64,/, '');
