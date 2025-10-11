@@ -72,9 +72,35 @@ export async function initializeDefaultThemes(): Promise<void> {
 }
 
 /**
+ * 레거시 프리셋 빌더 구조 (마이그레이션용)
+ */
+interface LegacyPresetBuilders {
+  character?: PresetBuilderSchema;
+  item?: PresetBuilderSchema;
+  environment?: PresetBuilderSchema;
+}
+
+/**
+ * 레거시 테마 구조 (마이그레이션용)
+ */
+interface LegacyTheme {
+  id: string;
+  name: string;
+  usageType: 'game' | 'web' | 'general';
+  description: string;
+  icon?: string;
+  artStyles: PromptTheme['artStyles'];
+  presetBuilders: LegacyPresetBuilders | PresetBuilderSchema[];
+  isDefault?: boolean;
+  isReadOnly?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
  * presetBuilders를 객체에서 배열로 마이그레이션
  */
-function migratePresetBuilders(theme: any): PromptTheme {
+function migratePresetBuilders(theme: LegacyTheme): PromptTheme {
   // presetBuilders가 이미 배열이면 그대로 반환
   if (Array.isArray(theme.presetBuilders)) {
     return theme as PromptTheme;
@@ -85,7 +111,7 @@ function migratePresetBuilders(theme: any): PromptTheme {
 
   if (theme.presetBuilders && typeof theme.presetBuilders === 'object') {
     // 이전 객체 구조: { character?: ..., item?: ..., environment?: ... }
-    const oldPresets = theme.presetBuilders as any;
+    const oldPresets = theme.presetBuilders as LegacyPresetBuilders;
 
     // 각 프리셋을 배열에 추가 (존재하는 것만)
     if (oldPresets.character) {
