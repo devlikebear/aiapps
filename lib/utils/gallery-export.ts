@@ -74,7 +74,13 @@ export async function exportGalleryToZip(
 
     // Add image to ZIP
     if (image.data) {
-      zip.file(filename, image.data);
+      // Convert base64 to binary
+      const binaryString = atob(image.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let j = 0; j < binaryString.length; j++) {
+        bytes[j] = binaryString.charCodeAt(j);
+      }
+      zip.file(filename, bytes);
     }
 
     // Add to manifest
