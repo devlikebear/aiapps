@@ -128,6 +128,17 @@ export default function ArtCreatePage() {
     setPrompt(generatedPrompt);
   };
 
+  // 테마 변경 시 첫 번째 프리셋 자동 선택
+  useEffect(() => {
+    if (
+      currentTheme &&
+      currentTheme.presetBuilders.length > 0 &&
+      !selectedPreset
+    ) {
+      setSelectedPreset(currentTheme.presetBuilders[0]);
+    }
+  }, [currentTheme, selectedPreset]);
+
   // 프리셋 변경 시 자동으로 프롬프트 생성
   useEffect(() => {
     if (promptMode === 'builder' && selectedPreset) {
