@@ -53,20 +53,23 @@ export function PresetBuilderEditor({
   value,
   onChange,
 }: PresetBuilderEditorProps) {
+  // groups가 undefined일 경우를 대비한 정규화
+  const groups = value.groups || [];
+
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(value.groups.map((g) => g.id))
+    new Set(groups.map((g) => g.id))
   );
   const [showPromptPreview, setShowPromptPreview] = useState(false);
 
   // 그룹 추가
   const handleAddGroup = () => {
     const newGroup = createEmptyGroup(
-      `그룹 ${value.groups.length + 1}`,
-      value.groups.length
+      `그룹 ${groups.length + 1}`,
+      groups.length
     );
     onChange({
       ...value,
-      groups: [...value.groups, newGroup],
+      groups: [...groups, newGroup],
     });
     setExpandedGroups((prev) => new Set([...prev, newGroup.id]));
   };
@@ -75,7 +78,7 @@ export function PresetBuilderEditor({
   const handleDeleteGroup = (groupId: string) => {
     onChange({
       ...value,
-      groups: value.groups.filter((g) => g.id !== groupId),
+      groups: groups.filter((g) => g.id !== groupId),
     });
     setExpandedGroups((prev) => {
       const newSet = new Set(prev);
@@ -91,9 +94,7 @@ export function PresetBuilderEditor({
   ) => {
     onChange({
       ...value,
-      groups: value.groups.map((g) =>
-        g.id === groupId ? { ...g, ...updates } : g
-      ),
+      groups: groups.map((g) => (g.id === groupId ? { ...g, ...updates } : g)),
     });
   };
 
@@ -101,7 +102,7 @@ export function PresetBuilderEditor({
   const handleAddField = (groupId: string) => {
     onChange({
       ...value,
-      groups: value.groups.map((g) => {
+      groups: groups.map((g) => {
         if (g.id === groupId) {
           const newField = createEmptyField(
             `필드 ${g.fields.length + 1}`,
@@ -122,7 +123,7 @@ export function PresetBuilderEditor({
   const handleDeleteField = (groupId: string, fieldId: string) => {
     onChange({
       ...value,
-      groups: value.groups.map((g) => {
+      groups: groups.map((g) => {
         if (g.id === groupId) {
           return {
             ...g,
@@ -142,7 +143,7 @@ export function PresetBuilderEditor({
   ) => {
     onChange({
       ...value,
-      groups: value.groups.map((g) => {
+      groups: groups.map((g) => {
         if (g.id === groupId) {
           return {
             ...g,
@@ -199,7 +200,7 @@ export function PresetBuilderEditor({
 
       {/* 그룹 목록 */}
       <div className="space-y-4">
-        {value.groups
+        {groups
           .sort((a, b) => a.order - b.order)
           .map((group) => (
             <div
