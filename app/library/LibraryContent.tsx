@@ -23,6 +23,9 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Upload,
+  FileArchive,
+  Loader2,
 } from 'lucide-react';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
 import { getAllImages, deleteImage } from '@/lib/storage/indexed-db';
@@ -30,6 +33,16 @@ import ImageEditor from '@/components/art/ImageEditor';
 import ImageComposer from '@/components/art/ImageComposer';
 import StyleTransfer from '@/components/art/StyleTransfer';
 import type { StoredImage, StoredAudio } from '@/lib/types/storage';
+import {
+  exportAndDownloadGallery,
+  type ExportProgressCallback,
+} from '@/lib/utils/gallery-export';
+import {
+  importGalleryFromZip,
+  previewZipContents,
+  type ImportProgressCallback,
+  type DuplicateStrategy,
+} from '@/lib/utils/gallery-import';
 
 type MediaType = 'all' | 'audio' | 'image';
 
@@ -97,6 +110,18 @@ export default function LibraryContent() {
 
   // Image composer state
   const [showComposer, setShowComposer] = useState(false);
+
+  // Export/Import state
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [importProgress, setImportProgress] = useState(0);
+  const [exportStatus, setExportStatus] = useState('');
+  const [importStatus, setImportStatus] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [duplicateStrategy, setDuplicateStrategy] =
+    useState<DuplicateStrategy>('skip');
 
   // Update tab from URL
   useEffect(() => {
@@ -249,6 +274,115 @@ export default function LibraryContent() {
   const handleComposerSave = () => {
     loadMedia();
     handleComposerClose();
+  };
+
+  // Export/Import handlers
+  const handleExportGallery = async () => {
+    if (selectedImageIds.length === 0) {
+      alert('내보낼 이미지를 선택해주세요');
+      return;
+    }
+
+    const selectedImages = imageList.filter((img) =>
+      selectedImageIds.includes(img.id)
+    );
+
+    setIsExporting(true);
+    setExportProgress(0);
+    setExportStatus('');
+
+    try {
+      const onProgress: ExportProgressCallback = (progress) => {
+        setExportProgress(progress.percentage);
+        setExportStatus(progress.status);
+      };
+
+      await exportAndDownloadGallery(selectedImages, onProgress);
+
+      // Reset selection after export
+      setSelectionMode(false);
+      setSelectedImageIds([]);
+      alert(`${selectedImages.length}개 이미지를 성공적으로 내보냈습니다.`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Export failed:', error);
+      alert('내보내기에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+      setExportStatus('');
+    }
+  };
+
+  const handleImportFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Preview ZIP contents
+      const { manifest } = await previewZipContents(file);
+      setImportFile(file);
+      setShowImportModal(true);
+
+      // Show preview info
+      // eslint-disable-next-line no-console
+      console.log(
+        `ZIP 파일: ${manifest.totalImages}개 이미지, 내보낸 날짜: ${new Date(manifest.exportDate).toLocaleDateString('ko-KR')}`
+      );
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Invalid ZIP file:', error);
+      alert('유효하지 않은 갤러리 ZIP 파일입니다.');
+    }
+
+    // Reset input
+    event.target.value = '';
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importFile) return;
+
+    setIsImporting(true);
+    setImportProgress(0);
+    setImportStatus('');
+    setShowImportModal(false);
+
+    try {
+      const onProgress: ImportProgressCallback = (progress) => {
+        setImportProgress(progress.percentage);
+        setImportStatus(progress.status);
+      };
+
+      const result = await importGalleryFromZip(
+        importFile,
+        duplicateStrategy,
+        onProgress
+      );
+
+      // Reload gallery
+      await loadMedia();
+
+      // Show result
+      alert(
+        `가져오기 완료:\n- 총 ${result.total}개\n- 가져옴: ${result.imported}개\n- 건너뜀: ${result.skipped}개\n- 오류: ${result.errors}개`
+      );
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Import failed:', error);
+      alert('가져오기에 실패했습니다.');
+    } finally {
+      setIsImporting(false);
+      setImportProgress(0);
+      setImportStatus('');
+      setImportFile(null);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setShowImportModal(false);
+    setImportFile(null);
   };
 
   // Toggle tag selection
@@ -653,26 +787,54 @@ export default function LibraryContent() {
                       <ImageIcon className="w-6 h-6 text-pink-400" />
                       이미지 ({filteredImages.length})
                     </h2>
-                    <button
-                      onClick={toggleSelectionMode}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                        selectionMode
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                    >
-                      {selectionMode ? (
-                        <>
-                          <CheckSquare className="w-5 h-5" />
-                          선택 완료
-                        </>
-                      ) : (
-                        <>
-                          <Square className="w-5 h-5" />
-                          이미지 선택
-                        </>
+                    <div className="flex items-center gap-2">
+                      {/* Import Button */}
+                      <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors cursor-pointer">
+                        <Upload className="w-5 h-5" />
+                        가져오기
+                        <input
+                          type="file"
+                          accept=".zip"
+                          onChange={handleImportFileSelect}
+                          className="hidden"
+                          disabled={isImporting}
+                        />
+                      </label>
+
+                      {/* Export Button (shown in selection mode) */}
+                      {selectionMode && selectedImageIds.length > 0 && (
+                        <button
+                          onClick={handleExportGallery}
+                          disabled={isExporting}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          <FileArchive className="w-5 h-5" />
+                          내보내기 ({selectedImageIds.length})
+                        </button>
                       )}
-                    </button>
+
+                      {/* Selection Mode Toggle */}
+                      <button
+                        onClick={toggleSelectionMode}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                          selectionMode
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        {selectionMode ? (
+                          <>
+                            <CheckSquare className="w-5 h-5" />
+                            선택 완료
+                          </>
+                        ) : (
+                          <>
+                            <Square className="w-5 h-5" />
+                            이미지 선택
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {paginatedImages.map((image) => (
@@ -1068,6 +1230,113 @@ export default function LibraryContent() {
           onClose={handleComposerClose}
           onSave={handleComposerSave}
         />
+      )}
+
+      {/* Export Progress Modal */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-white mb-4">
+              갤러리 내보내는 중...
+            </h3>
+            <div className="space-y-4">
+              <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 h-full transition-all duration-300"
+                  style={{ width: `${exportProgress}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">{exportStatus}</span>
+                <span className="text-white font-medium">
+                  {exportProgress}%
+                </span>
+              </div>
+              <div className="flex items-center justify-center text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                잠시만 기다려주세요...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Confirmation Modal */}
+      {showImportModal && importFile && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-white mb-4">
+              갤러리 가져오기
+            </h3>
+            <div className="space-y-4">
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-2">파일 이름:</p>
+                <p className="text-white font-medium">{importFile.name}</p>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">
+                  중복 처리 방법:
+                </label>
+                <select
+                  value={duplicateStrategy}
+                  onChange={(e) =>
+                    setDuplicateStrategy(e.target.value as DuplicateStrategy)
+                  }
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="skip">건너뛰기 (기존 이미지 유지)</option>
+                  <option value="overwrite">덮어쓰기 (기존 이미지 교체)</option>
+                  <option value="keep-both">둘 다 유지 (새 ID 생성)</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleImportCancel}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleImportConfirm}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  가져오기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Progress Modal */}
+      {isImporting && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-white mb-4">
+              갤러리 가져오는 중...
+            </h3>
+            <div className="space-y-4">
+              <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 h-full transition-all duration-300"
+                  style={{ width: `${importProgress}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">{importStatus}</span>
+                <span className="text-white font-medium">
+                  {importProgress}%
+                </span>
+              </div>
+              <div className="flex items-center justify-center text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                잠시만 기다려주세요...
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
