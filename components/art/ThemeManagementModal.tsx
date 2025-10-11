@@ -13,12 +13,9 @@ import {
 } from 'lucide-react';
 import type { PromptTheme } from '@/lib/art/prompt-theme';
 import type { UsageType, ArtStyle } from '@/lib/art/types';
-import { CharacterPromptForm } from './CharacterPromptForm';
-import { ItemPromptForm } from './ItemPromptForm';
-import { EnvironmentPromptForm } from './EnvironmentPromptForm';
-import type { CharacterPreset } from '@/lib/art/presets/character';
-import type { ItemPreset } from '@/lib/art/presets/item';
-import type { EnvironmentPreset } from '@/lib/art/presets/environment';
+import { PresetBuilderEditor } from './PresetBuilderEditor';
+import type { PresetBuilderSchema } from '@/lib/art/preset-builder-schema';
+import { createEmptyPresetSchema } from '@/lib/art/preset-builder-schema';
 import {
   getAllThemes,
   createTheme,
@@ -28,9 +25,6 @@ import {
   initializeDefaultThemes,
 } from '@/lib/art/theme-storage';
 import { ART_STYLE_PRESETS } from '@/lib/art/types';
-import { DEFAULT_CHARACTER_PRESET } from '@/lib/art/presets/character';
-import { DEFAULT_ITEM_PRESET } from '@/lib/art/presets/item';
-import { DEFAULT_ENVIRONMENT_PRESET } from '@/lib/art/presets/environment';
 
 interface ThemeManagementModalProps {
   isOpen: boolean;
@@ -56,21 +50,15 @@ export function ThemeManagementModal({
     selectedStyles: [] as ArtStyle[],
   });
 
-  // 프리셋 빌더 상태
-  const [characterPreset, setCharacterPreset] = useState<CharacterPreset>(
-    DEFAULT_CHARACTER_PRESET
-  );
-  const [itemPreset, setItemPreset] = useState<ItemPreset>(DEFAULT_ITEM_PRESET);
-  const [environmentPreset, setEnvironmentPreset] = useState<EnvironmentPreset>(
-    DEFAULT_ENVIRONMENT_PRESET
+  // 프리셋 빌더 상태 - 유연한 배열 구조
+  const [presetBuilders, setPresetBuilders] = useState<PresetBuilderSchema[]>(
+    []
   );
 
-  // 프리셋 빌더 섹션 확장 상태
-  const [expandedPresets, setExpandedPresets] = useState({
-    character: false,
-    item: false,
-    environment: false,
-  });
+  // 편집 중인 프리셋 인덱스
+  const [editingPresetIndex, setEditingPresetIndex] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -99,11 +87,9 @@ export function ThemeManagementModal({
       icon: '🎨',
       selectedStyles: [],
     });
-    // 프리셋을 기본값으로 초기화
-    setCharacterPreset(DEFAULT_CHARACTER_PRESET);
-    setItemPreset(DEFAULT_ITEM_PRESET);
-    setEnvironmentPreset(DEFAULT_ENVIRONMENT_PRESET);
-    setExpandedPresets({ character: false, item: false, environment: false });
+    // 프리셋 빌더 초기화
+    setPresetBuilders([]);
+    setEditingPresetIndex(null);
   };
 
   const handleEdit = (theme: PromptTheme) => {
@@ -121,14 +107,8 @@ export function ThemeManagementModal({
       selectedStyles: theme.artStyles.map((s) => s.value),
     });
     // 기존 테마의 프리셋 빌더 로드
-    setCharacterPreset(
-      theme.presetBuilders.character || DEFAULT_CHARACTER_PRESET
-    );
-    setItemPreset(theme.presetBuilders.item || DEFAULT_ITEM_PRESET);
-    setEnvironmentPreset(
-      theme.presetBuilders.environment || DEFAULT_ENVIRONMENT_PRESET
-    );
-    setExpandedPresets({ character: false, item: false, environment: false });
+    setPresetBuilders(theme.presetBuilders);
+    setEditingPresetIndex(null);
   };
 
   const handleDuplicate = async (theme: PromptTheme) => {
@@ -188,13 +168,6 @@ export function ThemeManagementModal({
           example: preset.examples[0],
         };
       });
-
-      // 프리셋 빌더 준비
-      const presetBuilders = {
-        character: characterPreset,
-        item: itemPreset,
-        environment: environmentPreset,
-      };
 
       if (editingTheme) {
         // Update existing theme
@@ -500,97 +473,101 @@ export function ThemeManagementModal({
 
               {/* Preset Builders */}
               <div className="space-y-4">
-                <h4 className="text-lg font-medium">프리셋 빌더 설정</h4>
-                <p className="text-sm text-gray-400">
-                  각 에셋 타입별 기본 프리셋을 커스터마이즈할 수 있습니다
-                </p>
-
-                {/* Character Preset */}
-                <div className="border border-gray-700 rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-medium">프리셋 빌더 설정</h4>
+                    <p className="text-sm text-gray-400">
+                      테마에서 사용할 프리셋을 추가하고 커스터마이즈하세요
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setExpandedPresets((prev) => ({
-                        ...prev,
-                        character: !prev.character,
-                      }))
-                    }
-                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors"
+                    onClick={() => {
+                      const newPreset = createEmptyPresetSchema(
+                        `프리셋 ${presetBuilders.length + 1}`
+                      );
+                      setPresetBuilders([...presetBuilders, newPreset]);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-sm"
                   >
-                    <span className="font-medium">🧍 캐릭터 프리셋</span>
-                    {expandedPresets.character ? (
-                      <ChevronUp className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
-                    )}
+                    <Plus className="w-4 h-4" />새 프리셋
                   </button>
-                  {expandedPresets.character && (
-                    <div className="p-4 bg-gray-900/50">
-                      <CharacterPromptForm
-                        value={characterPreset}
-                        onChange={setCharacterPreset}
-                      />
-                    </div>
-                  )}
                 </div>
 
-                {/* Item Preset */}
-                <div className="border border-gray-700 rounded-lg overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedPresets((prev) => ({
-                        ...prev,
-                        item: !prev.item,
-                      }))
-                    }
-                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors"
-                  >
-                    <span className="font-medium">⚔️ 아이템 프리셋</span>
-                    {expandedPresets.item ? (
-                      <ChevronUp className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
-                    )}
-                  </button>
-                  {expandedPresets.item && (
-                    <div className="p-4 bg-gray-900/50">
-                      <ItemPromptForm
-                        value={itemPreset}
-                        onChange={setItemPreset}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Environment Preset */}
-                <div className="border border-gray-700 rounded-lg overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedPresets((prev) => ({
-                        ...prev,
-                        environment: !prev.environment,
-                      }))
-                    }
-                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors"
-                  >
-                    <span className="font-medium">🏞️ 환경 프리셋</span>
-                    {expandedPresets.environment ? (
-                      <ChevronUp className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
-                    )}
-                  </button>
-                  {expandedPresets.environment && (
-                    <div className="p-4 bg-gray-900/50">
-                      <EnvironmentPromptForm
-                        value={environmentPreset}
-                        onChange={setEnvironmentPreset}
-                      />
-                    </div>
-                  )}
-                </div>
+                {presetBuilders.length === 0 ? (
+                  <div className="p-8 border-2 border-dashed border-gray-700 rounded-lg text-center">
+                    <p className="text-gray-400 mb-3">아직 프리셋이 없습니다</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPreset =
+                          createEmptyPresetSchema('첫 번째 프리셋');
+                        setPresetBuilders([newPreset]);
+                      }}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
+                    >
+                      첫 프리셋 만들기
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {presetBuilders.map((preset, index) => (
+                      <div
+                        key={preset.id}
+                        className="border border-gray-700 rounded-lg overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingPresetIndex(
+                              editingPresetIndex === index ? null : index
+                            )
+                          }
+                          className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors"
+                        >
+                          <span className="font-medium">
+                            {preset.icon || '📦'} {preset.name}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPresetBuilders(
+                                  presetBuilders.filter((_, i) => i !== index)
+                                );
+                                if (editingPresetIndex === index) {
+                                  setEditingPresetIndex(null);
+                                }
+                              }}
+                              className="p-1 hover:bg-red-500/20 text-red-400 rounded transition-colors"
+                              title="삭제"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            {editingPresetIndex === index ? (
+                              <ChevronUp className="w-5 h-5" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5" />
+                            )}
+                          </div>
+                        </button>
+                        {editingPresetIndex === index && (
+                          <div className="p-4 bg-gray-900/50 border-t border-gray-700">
+                            <PresetBuilderEditor
+                              value={preset}
+                              onChange={(updated) => {
+                                const newPresets = [...presetBuilders];
+                                newPresets[index] = updated;
+                                setPresetBuilders(newPresets);
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Save Button */}

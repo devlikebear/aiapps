@@ -14,28 +14,17 @@ import {
 } from '@/lib/art/types';
 import { UsageTypeSelector } from '@/components/art/UsageTypeSelector';
 import { ReferenceImageUploader } from '@/components/art/ReferenceImageUploader';
-import { AssetTypeSelector } from '@/components/art/AssetTypeSelector';
-import { CharacterPromptForm } from '@/components/art/CharacterPromptForm';
-import { ItemPromptForm } from '@/components/art/ItemPromptForm';
-import { EnvironmentPromptForm } from '@/components/art/EnvironmentPromptForm';
 import { ThemeSelector } from '@/components/art/ThemeSelector';
 import { ThemeManagementModal } from '@/components/art/ThemeManagementModal';
+import { DynamicPresetForm } from '@/components/art/DynamicPresetForm';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
 import { getAllImages } from '@/lib/storage/indexed-db';
 import { generateImageTags } from '@/lib/utils/tags';
-import { PromptBuilder, type PromptPreset } from '@/lib/art/prompt-builder';
-import {
-  DEFAULT_CHARACTER_PRESET,
-  type CharacterPreset,
-} from '@/lib/art/presets/character';
-import { DEFAULT_ITEM_PRESET, type ItemPreset } from '@/lib/art/presets/item';
-import {
-  DEFAULT_ENVIRONMENT_PRESET,
-  type EnvironmentPreset,
-} from '@/lib/art/presets/environment';
 import type { PromptTheme } from '@/lib/art/prompt-theme';
+import type { PresetBuilderSchema } from '@/lib/art/preset-builder-schema';
+import { buildPromptFromSchema } from '@/lib/art/preset-builder-schema';
 
 const RESOLUTIONS = [
   { label: '256×256', value: '256x256' },
@@ -102,20 +91,14 @@ export default function ArtCreatePage() {
       setStyle(theme.artStyles[0].value);
     }
 
-    // Update preset builders
-    if (theme.presetBuilders.character) {
-      setCharacterPreset(theme.presetBuilders.character);
-    }
-    if (theme.presetBuilders.item) {
-      setItemPreset(theme.presetBuilders.item);
-    }
-    if (theme.presetBuilders.environment) {
-      setEnvironmentPreset(theme.presetBuilders.environment);
+    // Select first preset if available
+    if (theme.presetBuilders.length > 0) {
+      setSelectedPreset(theme.presetBuilders[0]);
     }
 
     // Rebuild prompt if in builder mode
     if (promptMode === 'builder') {
-      buildPromptFromPreset();
+      handleBuildPromptFromPreset();
     }
   };
   const [prompt, setPrompt] = useState('');
@@ -129,41 +112,29 @@ export default function ArtCreatePage() {
     influence: 70,
   });
 
-  // Prompt Builder state
+  // Prompt Builder state - 유연한 프리셋 시스템
   const [promptMode, setPromptMode] = useState<'manual' | 'builder'>('manual');
-  const [assetType, setAssetType] = useState<
-    'character' | 'item' | 'environment'
-  >('character');
-  const [characterPreset, setCharacterPreset] = useState<CharacterPreset>(
-    DEFAULT_CHARACTER_PRESET
-  );
-  const [itemPreset, setItemPreset] = useState<ItemPreset>(DEFAULT_ITEM_PRESET);
-  const [environmentPreset, setEnvironmentPreset] = useState<EnvironmentPreset>(
-    DEFAULT_ENVIRONMENT_PRESET
-  );
+  const [selectedPreset, setSelectedPreset] =
+    useState<PresetBuilderSchema | null>(null);
 
   // 프롬프트 빌더에서 프롬프트 생성
-  const buildPromptFromPreset = () => {
-    let preset: PromptPreset;
-    if (assetType === 'character') {
-      preset = characterPreset;
-    } else if (assetType === 'item') {
-      preset = itemPreset;
-    } else {
-      preset = environmentPreset;
+  const handleBuildPromptFromPreset = () => {
+    if (!selectedPreset) {
+      setPrompt('');
+      return;
     }
 
-    const generatedPrompt = PromptBuilder.buildPrompt(preset);
+    const generatedPrompt = buildPromptFromSchema(selectedPreset);
     setPrompt(generatedPrompt);
   };
 
-  // 에셋 타입 변경 시 자동으로 프롬프트 생성
+  // 프리셋 변경 시 자동으로 프롬프트 생성
   useEffect(() => {
-    if (promptMode === 'builder') {
-      buildPromptFromPreset();
+    if (promptMode === 'builder' && selectedPreset) {
+      handleBuildPromptFromPreset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assetType, characterPreset, itemPreset, environmentPreset, promptMode]);
+  }, [selectedPreset, promptMode]);
 
   // Related images state
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
@@ -454,7 +425,7 @@ export default function ArtCreatePage() {
                   type="button"
                   onClick={() => {
                     setPromptMode('builder');
-                    buildPromptFromPreset();
+                    handleBuildPromptFromPreset();
                   }}
                   className={`
                     px-3 py-1 rounded text-xs transition-all flex items-center gap-1
@@ -474,23 +445,48 @@ export default function ArtCreatePage() {
             {/* Builder Mode */}
             {promptMode === 'builder' && (
               <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700 space-y-4">
-                {/* Asset Type Selector */}
-                <AssetTypeSelector value={assetType} onChange={setAssetType} />
+                {/* Preset Selector */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    프리셋 선택
+                  </label>
+                  <select
+                    value={selectedPreset?.id || ''}
+                    onChange={(e) => {
+                      const preset = currentTheme?.presetBuilders.find(
+                        (p) => p.id === e.target.value
+                      );
+                      setSelectedPreset(preset || null);
+                    }}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    disabled={
+                      !currentTheme || currentTheme.presetBuilders.length === 0
+                    }
+                  >
+                    {currentTheme && currentTheme.presetBuilders.length > 0 ? (
+                      currentTheme.presetBuilders.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.icon || '📦'} {preset.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">테마를 먼저 선택하세요</option>
+                    )}
+                  </select>
+                  {selectedPreset?.description && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      {selectedPreset.description}
+                    </p>
+                  )}
+                </div>
 
-                {/* Dynamic Form based on Asset Type */}
-                {assetType === 'character' && (
-                  <CharacterPromptForm
-                    value={characterPreset}
-                    onChange={setCharacterPreset}
-                  />
-                )}
-                {assetType === 'item' && (
-                  <ItemPromptForm value={itemPreset} onChange={setItemPreset} />
-                )}
-                {assetType === 'environment' && (
-                  <EnvironmentPromptForm
-                    value={environmentPreset}
-                    onChange={setEnvironmentPreset}
+                {/* Dynamic Preset Form */}
+                {selectedPreset && (
+                  <DynamicPresetForm
+                    schema={selectedPreset}
+                    onChange={(updatedSchema) => {
+                      setSelectedPreset(updatedSchema);
+                    }}
                   />
                 )}
               </div>
@@ -507,7 +503,7 @@ export default function ArtCreatePage() {
                 {promptMode === 'builder' && (
                   <button
                     type="button"
-                    onClick={buildPromptFromPreset}
+                    onClick={handleBuildPromptFromPreset}
                     className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
                   >
                     🔄 프롬프트 재생성
