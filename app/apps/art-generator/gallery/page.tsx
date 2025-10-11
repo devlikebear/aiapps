@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -15,6 +16,15 @@ import {
   deleteImage,
   getStorageSize,
 } from '@/lib/storage/indexed-db';
+import GalleryFiltersComponent from '@/components/art/GalleryFilters';
+import {
+  searchAndFilterImages,
+  getFilterOptions,
+  filtersToQueryParams,
+  queryParamsToFilters,
+  type GalleryFilters,
+  type SortOption,
+} from '@/lib/utils/gallery-search';
 
 interface StoredImage {
   id: string;
@@ -32,16 +42,42 @@ interface StoredImage {
   createdAt: Date;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export default function ArtGalleryPage() {
-  const [imageList, setImageList] = useState<StoredImage[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // All images from IndexedDB
+  const [allImages, setAllImages] = useState<StoredImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageInfo, setStorageInfo] = useState<{
     audioCount: number;
     imageCount: number;
     estimatedSize: number;
   } | null>(null);
+
+  // Filter and sort states
+  const [filters, setFilters] = useState<GalleryFilters>(() =>
+    queryParamsToFilters(searchParams)
+  );
+  const [sortBy, setSortBy] = useState<SortOption>(() => {
+    const sortParam = searchParams.get('sort');
+    return (sortParam as SortOption) || 'date-desc';
+  });
+
+  // Filtered and paginated results
+  const [displayedImages, setDisplayedImages] = useState<StoredImage[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalFilteredCount, setTotalFilteredCount] = useState(0);
+
+  // UI state
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
 
+  // Load all images from IndexedDB on mount
   useEffect(() => {
     loadImageGallery();
     loadStorageInfo();
@@ -51,12 +87,7 @@ export default function ArtGalleryPage() {
     try {
       setIsLoading(true);
       const images = await getAllImages();
-      // 최신순으로 정렬
-      const sorted = images.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setImageList(sorted);
+      setAllImages(images);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load image gallery:', error);
@@ -73,6 +104,109 @@ export default function ArtGalleryPage() {
       // eslint-disable-next-line no-console
       console.error('Failed to load storage info:', error);
     }
+  };
+
+  // Apply filters and update displayed images
+  useEffect(() => {
+    if (allImages.length === 0) {
+      setDisplayedImages([]);
+      setTotalFilteredCount(0);
+      setHasMore(false);
+      return;
+    }
+
+    // Reset pagination when filters change
+    setCurrentPage(0);
+
+    const {
+      results,
+      total,
+      hasMore: more,
+    } = searchAndFilterImages(allImages, {
+      filters,
+      sortBy,
+      limit: ITEMS_PER_PAGE,
+      offset: 0,
+    });
+
+    setDisplayedImages(results);
+    setTotalFilteredCount(total);
+    setHasMore(more);
+  }, [allImages, filters, sortBy]);
+
+  // Load more images (infinite scroll)
+  const loadMore = useCallback(() => {
+    if (!hasMore) return;
+
+    const nextPage = currentPage + 1;
+    const { results } = searchAndFilterImages(allImages, {
+      filters,
+      sortBy,
+      limit: ITEMS_PER_PAGE,
+      offset: nextPage * ITEMS_PER_PAGE,
+    });
+
+    setDisplayedImages((prev) => [...prev, ...results]);
+    setCurrentPage(nextPage);
+
+    // Check if there are more items
+    const nextOffset = (nextPage + 1) * ITEMS_PER_PAGE;
+    const { hasMore: more } = searchAndFilterImages(allImages, {
+      filters,
+      sortBy,
+      limit: ITEMS_PER_PAGE,
+      offset: nextOffset,
+    });
+    setHasMore(more);
+  }, [allImages, filters, sortBy, currentPage, hasMore]);
+
+  // Setup Intersection Observer for infinite scroll
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1,
+    };
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore && !isLoading) {
+        loadMore();
+      }
+    }, options);
+
+    const currentLoadMoreRef = loadMoreRef.current;
+    if (currentLoadMoreRef) {
+      observerRef.current.observe(currentLoadMoreRef);
+    }
+
+    return () => {
+      if (observerRef.current && currentLoadMoreRef) {
+        observerRef.current.unobserve(currentLoadMoreRef);
+      }
+    };
+  }, [hasMore, isLoading, loadMore]);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = filtersToQueryParams(filters);
+    if (sortBy !== 'date-desc') {
+      params.set('sort', sortBy);
+    }
+
+    const newUrl = params.toString()
+      ? `/apps/art-generator/gallery?${params.toString()}`
+      : '/apps/art-generator/gallery';
+
+    router.replace(newUrl, { scroll: false });
+  }, [filters, sortBy, router]);
+
+  // Handle filter changes
+  const handleFiltersChange = (newFilters: GalleryFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleSortChange = (newSort: SortOption) => {
+    setSortBy(newSort);
   };
 
   const handleDownload = (
@@ -104,7 +238,7 @@ export default function ArtGalleryPage() {
 
     try {
       await deleteImage(id);
-      setImageList((prev) => prev.filter((img) => img.id !== id));
+      setAllImages((prev) => prev.filter((img) => img.id !== id));
 
       if (selectedImage?.id === id) {
         setSelectedImage(null);
@@ -118,6 +252,9 @@ export default function ArtGalleryPage() {
       alert('이미지 삭제에 실패했습니다.');
     }
   };
+
+  // Get filter options from all images
+  const filterOptions = getFilterOptions(allImages);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -170,6 +307,19 @@ export default function ArtGalleryPage() {
           )}
         </div>
 
+        {/* Filters */}
+        {!isLoading && allImages.length > 0 && (
+          <GalleryFiltersComponent
+            filters={filters}
+            sortBy={sortBy}
+            onFiltersChange={handleFiltersChange}
+            onSortChange={handleSortChange}
+            filterOptions={filterOptions}
+            resultCount={totalFilteredCount}
+            totalCount={allImages.length}
+          />
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-20">
@@ -182,8 +332,8 @@ export default function ArtGalleryPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!isLoading && imageList.length === 0 && (
+        {/* Empty State - No images at all */}
+        {!isLoading && allImages.length === 0 && (
           <div className="text-center py-20">
             <ImageIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <h2 className="text-xl font-semibold mb-2">
@@ -202,71 +352,96 @@ export default function ArtGalleryPage() {
           </div>
         )}
 
+        {/* Empty State - No results after filtering */}
+        {!isLoading && allImages.length > 0 && displayedImages.length === 0 && (
+          <div className="text-center py-20">
+            <ImageIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <h2 className="text-xl font-semibold mb-2">검색 결과가 없습니다</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              다른 필터 조건을 시도해보세요
+            </p>
+          </div>
+        )}
+
         {/* Image Grid */}
-        {!isLoading && imageList.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {imageList.map((image) => (
-              <div
-                key={image.id}
-                className="app-card group overflow-hidden cursor-pointer hover:shadow-xl transition-all"
-                onClick={() => setSelectedImage(image)}
-              >
-                {/* Image */}
-                <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
-                  <Image
-                    src={getImageDataUrl(image)}
-                    alt={image.metadata.prompt}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    unoptimized
-                  />
-                </div>
-
-                {/* Info */}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                      {image.metadata.style}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {image.metadata.width}×{image.metadata.height}
-                    </span>
+        {!isLoading && displayedImages.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+              {displayedImages.map((image) => (
+                <div
+                  key={image.id}
+                  className="app-card group overflow-hidden cursor-pointer hover:shadow-xl transition-all"
+                  onClick={() => setSelectedImage(image)}
+                >
+                  {/* Image */}
+                  <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <Image
+                      src={getImageDataUrl(image)}
+                      alt={image.metadata.prompt}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      unoptimized
+                    />
                   </div>
-                  <p className="text-sm line-clamp-2 mb-2">
-                    {image.metadata.prompt}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatDate(image.createdAt)}
-                  </p>
-                </div>
 
-                {/* Quick Actions */}
-                <div className="p-3 border-t dark:border-gray-700 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(image, 'png');
-                    }}
-                    className="flex-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
-                    title="PNG 다운로드"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-xs">PNG</span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(image.id);
-                    }}
-                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
-                    title="삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* Info */}
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                        {image.metadata.style}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {image.metadata.width}×{image.metadata.height}
+                      </span>
+                    </div>
+                    <p className="text-sm line-clamp-2 mb-2">
+                      {image.metadata.prompt}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(image.createdAt)}
+                    </p>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="p-3 border-t dark:border-gray-700 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(image, 'png');
+                      }}
+                      className="flex-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
+                      title="PNG 다운로드"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="text-xs">PNG</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(image.id);
+                      }}
+                      className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Infinite Scroll Trigger */}
+            {hasMore && (
+              <div ref={loadMoreRef} className="flex justify-center py-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    더 불러오는 중...
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
         {/* Image Detail Modal */}
