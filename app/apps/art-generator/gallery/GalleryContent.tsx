@@ -10,7 +10,9 @@ import {
   Trash2,
   Image as ImageIcon,
   X,
+  Edit,
 } from 'lucide-react';
+import ImageEditor from '@/components/art/ImageEditor';
 import {
   getAllImages,
   deleteImage,
@@ -76,6 +78,7 @@ export default function GalleryContent() {
 
   // UI state
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
+  const [editingImage, setEditingImage] = useState<StoredImage | null>(null);
 
   // Load all images from IndexedDB on mount
   useEffect(() => {
@@ -407,6 +410,17 @@ export default function GalleryContent() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        setEditingImage(image);
+                      }}
+                      className="flex-1 p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 transition-colors flex items-center justify-center gap-1"
+                      title="편집"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="text-xs">편집</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleDownload(image, 'png');
                       }}
                       className="flex-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
@@ -538,8 +552,18 @@ export default function GalleryContent() {
                   {/* Actions */}
                   <div className="mt-6 space-y-2">
                     <button
-                      onClick={() => handleDownload(selectedImage, 'png')}
+                      onClick={() => {
+                        setEditingImage(selectedImage);
+                        setSelectedImage(null);
+                      }}
                       className="w-full app-button flex items-center justify-center gap-2"
+                    >
+                      <Edit className="w-5 h-5" />
+                      이미지 편집
+                    </button>
+                    <button
+                      onClick={() => handleDownload(selectedImage, 'png')}
+                      className="w-full app-button-secondary flex items-center justify-center gap-2"
                     >
                       <Download className="w-5 h-5" />
                       PNG 다운로드
@@ -566,6 +590,19 @@ export default function GalleryContent() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Image Editor Modal */}
+        {editingImage && (
+          <ImageEditor
+            image={editingImage}
+            onClose={() => setEditingImage(null)}
+            onSave={() => {
+              // Refresh gallery to show new edited image
+              loadImageGallery();
+              setEditingImage(null);
+            }}
+          />
         )}
       </div>
     </div>
