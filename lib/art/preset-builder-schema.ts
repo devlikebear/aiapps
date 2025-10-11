@@ -119,6 +119,11 @@ export function interpolatePromptTemplate(
 export function buildPromptFromSchema(schema: PresetBuilderSchema): string {
   const prompts: string[] = [];
 
+  // groups가 없으면 빈 문자열 반환
+  if (!schema.groups || !Array.isArray(schema.groups)) {
+    return '';
+  }
+
   // 그룹을 order 순으로 정렬
   const sortedGroups = [...schema.groups].sort((a, b) => a.order - b.order);
 
