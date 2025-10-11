@@ -13,9 +13,6 @@ const meta = {
       control: 'select',
       options: ['none', 'sm', 'md', 'lg'],
     },
-    hoverable: {
-      control: 'boolean',
-    },
   },
 } satisfies Meta<typeof Card>;
 
@@ -86,20 +83,6 @@ export const LargePadding: Story = {
           Large Padding
         </h3>
         <p className="text-gray-400">This card has large padding.</p>
-      </div>
-    ),
-  },
-};
-
-export const Hoverable: Story = {
-  args: {
-    hoverable: true,
-    children: (
-      <div>
-        <h3 className="text-lg font-semibold text-gray-100 mb-2">
-          Hoverable Card
-        </h3>
-        <p className="text-gray-400">Hover over this card to see the effect.</p>
       </div>
     ),
   },
