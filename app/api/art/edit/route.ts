@@ -22,7 +22,6 @@ interface ImageEditRequest {
   imageData: string; // base64 encoded image
   prompt: string; // edit instruction
   mask?: string; // optional base64 encoded mask image
-  preserveAspectRatio?: boolean;
 }
 
 interface ImageEditResponse {
@@ -112,11 +111,6 @@ export async function POST(request: NextRequest) {
       ],
       generationConfig: {
         responseModalities: ['Image'],
-        ...(body.preserveAspectRatio && {
-          imageConfig: {
-            preserveAspectRatio: true,
-          },
-        }),
       },
     };
 

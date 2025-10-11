@@ -97,7 +97,6 @@ export default function ImageEditor({
         imageData: originalImageUrl,
         prompt: editPrompt,
         ...(maskData && { mask: maskData }),
-        preserveAspectRatio: true,
       };
 
       const response = await fetch('/api/art/edit', {
