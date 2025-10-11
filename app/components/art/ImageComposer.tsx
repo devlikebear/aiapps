@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { X, Sparkles, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
 import { saveImage } from '@/lib/storage/indexed-db';
 import { getApiKey } from '@/lib/api-key/storage';
@@ -98,6 +99,7 @@ export default function ImageComposer({
       setComposedImage(composedDataUrl);
       toast.success('이미지 합성 완료!');
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Image composition error:', err);
       toast.error(
         err instanceof Error
@@ -135,6 +137,7 @@ export default function ImageComposer({
       onSave();
       onClose();
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Save error:', err);
       toast.error('갤러리 저장 실패');
     }
@@ -184,10 +187,12 @@ export default function ImageComposer({
                   key={image.id}
                   className="relative aspect-square rounded-lg overflow-hidden bg-gray-800 group"
                 >
-                  <img
+                  <Image
                     src={image.dataUrl}
                     alt={`Source ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                   <div className="absolute top-2 left-2 px-2 py-1 bg-black/70 rounded text-xs text-white font-medium">
                     #{index + 1}
@@ -244,10 +249,13 @@ export default function ImageComposer({
                 합성 결과
               </label>
               <div className="relative rounded-lg overflow-hidden bg-gray-800">
-                <img
+                <Image
                   src={composedImage}
                   alt="Composed"
+                  width={1024}
+                  height={1024}
                   className="w-full h-auto"
+                  unoptimized
                 />
               </div>
             </div>
