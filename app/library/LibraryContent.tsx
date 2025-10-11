@@ -19,6 +19,10 @@ import {
   Square,
   Layers,
   Wand2,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
 import { getAllImages, deleteImage } from '@/lib/storage/indexed-db';
@@ -52,6 +56,21 @@ export default function LibraryContent() {
   // Tag filter state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  // Advanced filter state
+  const [availableStyles, setAvailableStyles] = useState<string[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{
+    start: string | null;
+    end: string | null;
+  }>({ start: null, end: null });
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'size'>(
+    'newest'
+  );
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
 
   // Audio player state
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);
@@ -115,10 +134,21 @@ export default function LibraryContent() {
 
       // 모든 태그 수집 (중복 제거)
       const allTags = new Set<string>();
+      const allStyles = new Set<string>();
+
       [...audioWithBlobs, ...imagesWithBlobs].forEach((item) => {
         item.tags?.forEach((tag) => allTags.add(tag));
       });
+
+      // 이미지 스타일 수집
+      imagesWithBlobs.forEach((item) => {
+        if (item.metadata.style) {
+          allStyles.add(item.metadata.style);
+        }
+      });
+
       setAvailableTags(Array.from(allTags).sort());
+      setAvailableStyles(Array.from(allStyles).sort());
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load media:', error);
@@ -226,33 +256,96 @@ export default function LibraryContent() {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+    setCurrentPage(1); // Reset to first page when filter changes
   };
 
   // Clear all tag filters
   const clearTagFilters = () => {
     setSelectedTags([]);
+    setCurrentPage(1);
   };
 
-  // Filter media based on search query and tags
-  const filteredAudio = audioList.filter((audio) => {
-    const matchesSearch = audio.metadata.prompt
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesTags =
-      selectedTags.length === 0 ||
-      selectedTags.some((tag) => audio.tags?.includes(tag));
-    return matchesSearch && matchesTags;
-  });
+  // Toggle style selection
+  const toggleStyle = (style: string) => {
+    setSelectedStyles((prev) =>
+      prev.includes(style) ? prev.filter((s) => s !== style) : [...prev, style]
+    );
+    setCurrentPage(1);
+  };
 
-  const filteredImages = imageList.filter((image) => {
-    const matchesSearch = image.metadata.prompt
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesTags =
-      selectedTags.length === 0 ||
-      selectedTags.some((tag) => image.tags?.includes(tag));
-    return matchesSearch && matchesTags;
-  });
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedTags([]);
+    setSelectedStyles([]);
+    setDateRange({ start: null, end: null });
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  // Filter and sort media
+  const filterAndSortMedia = <T extends AudioWithBlob | ImageWithBlob>(
+    items: T[]
+  ): T[] => {
+    const filtered = items.filter((item) => {
+      // Search filter
+      const matchesSearch =
+        searchQuery === '' ||
+        item.metadata.prompt.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Tag filter
+      const matchesTags =
+        selectedTags.length === 0 ||
+        selectedTags.some((tag) => item.tags?.includes(tag));
+
+      // Style filter (images only)
+      const matchesStyle =
+        selectedStyles.length === 0 ||
+        ('style' in item.metadata &&
+          selectedStyles.includes(item.metadata.style || ''));
+
+      // Date range filter
+      const itemDate = new Date(item.metadata.createdAt);
+      const matchesDateRange =
+        (!dateRange.start || itemDate >= new Date(dateRange.start)) &&
+        (!dateRange.end || itemDate <= new Date(dateRange.end));
+
+      return matchesSearch && matchesTags && matchesStyle && matchesDateRange;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return (
+            new Date(b.metadata.createdAt).getTime() -
+            new Date(a.metadata.createdAt).getTime()
+          );
+        case 'oldest':
+          return (
+            new Date(a.metadata.createdAt).getTime() -
+            new Date(b.metadata.createdAt).getTime()
+          );
+        case 'name':
+          return a.metadata.prompt.localeCompare(b.metadata.prompt);
+        case 'size':
+          return (b.data?.length || 0) - (a.data?.length || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredAudio = filterAndSortMedia(audioList);
+  const filteredImages = filterAndSortMedia(imageList);
+
+  // Paginate images
+  const totalImagePages = Math.ceil(filteredImages.length / itemsPerPage);
+  const paginatedImages = filteredImages.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Stats
   const totalAudio = audioList.length;
@@ -406,6 +499,71 @@ export default function LibraryContent() {
           </div>
         )}
 
+        {/* Sort & Advanced Filters */}
+        {(filteredImages.length > 0 || filteredAudio.length > 0) && (
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-lg border border-gray-700/50 p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                <label className="text-sm text-gray-400">정렬:</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(
+                      e.target.value as 'newest' | 'oldest' | 'name' | 'size'
+                    );
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="newest">최신순</option>
+                  <option value="oldest">오래된순</option>
+                  <option value="name">이름순</option>
+                  <option value="size">크기순</option>
+                </select>
+              </div>
+
+              {/* Style Filters (Images Only) */}
+              {activeTab !== 'audio' && availableStyles.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-gray-400" />
+                  <label className="text-sm text-gray-400">스타일:</label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableStyles.map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => toggleStyle(style)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                          selectedStyles.includes(style)
+                            ? 'bg-purple-600 text-white ring-2 ring-purple-400'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Clear All Filters */}
+              {(selectedTags.length > 0 ||
+                selectedStyles.length > 0 ||
+                dateRange.start ||
+                dateRange.end ||
+                searchQuery) && (
+                <button
+                  onClick={clearAllFilters}
+                  className="ml-auto px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors"
+                >
+                  모든 필터 초기화
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -517,7 +675,7 @@ export default function LibraryContent() {
                     </button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filteredImages.map((image) => (
+                    {paginatedImages.map((image) => (
                       <div
                         key={image.id}
                         className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border transition-all group ${
@@ -624,6 +782,96 @@ export default function LibraryContent() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Pagination Controls */}
+                  {filteredImages.length > itemsPerPage && (
+                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      {/* Items Per Page */}
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-400">
+                          페이지당:
+                        </label>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="12">12개</option>
+                          <option value="24">24개</option>
+                          <option value="48">48개</option>
+                          <option value="96">96개</option>
+                        </select>
+                        <span className="text-sm text-gray-400">
+                          전체 {filteredImages.length}개
+                        </span>
+                      </div>
+
+                      {/* Page Navigation */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(1, prev - 1))
+                          }
+                          disabled={currentPage === 1}
+                          className="p-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                          {Array.from(
+                            { length: Math.min(totalImagePages, 5) },
+                            (_, i) => {
+                              let pageNum: number;
+                              if (totalImagePages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalImagePages - 2) {
+                                pageNum = totalImagePages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
+
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                    currentPage === pageNum
+                                      ? 'bg-purple-600 text-white'
+                                      : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            }
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(totalImagePages, prev + 1)
+                            )
+                          }
+                          disabled={currentPage === totalImagePages}
+                          className="p-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Page Info */}
+                      <div className="text-sm text-gray-400">
+                        페이지 {currentPage} / {totalImagePages}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
