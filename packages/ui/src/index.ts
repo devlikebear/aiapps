@@ -12,9 +12,15 @@ export type { SelectProps } from './components/Select';
 export { Card } from './components/Card';
 export type { CardProps } from './components/Card';
 
+export { Modal } from './components/Modal';
+export type { ModalProps } from './components/Modal';
+
 // Status
 export { LoadingSpinner } from './components/LoadingSpinner';
 export type { LoadingSpinnerProps } from './components/LoadingSpinner';
 
 export { ErrorMessage } from './components/ErrorMessage';
 export type { ErrorMessageProps } from './components/ErrorMessage';
+
+export { Toast } from './components/Toast';
+export type { ToastProps } from './components/Toast';
