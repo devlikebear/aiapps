@@ -4,9 +4,19 @@
 
 import type { PromptTheme } from './prompt-theme';
 import type { ArtStyle } from './types';
-import { DEFAULT_CHARACTER_PRESET } from './presets/character';
-import { DEFAULT_ITEM_PRESET } from './presets/item';
-import { DEFAULT_ENVIRONMENT_PRESET } from './presets/environment';
+import {
+  BUILTIN_CHARACTER_PRESET,
+  BUILTIN_ITEM_PRESET,
+  BUILTIN_ENVIRONMENT_PRESET,
+  BUILTIN_HERO_PRESET,
+  BUILTIN_BANNER_PRESET,
+  BUILTIN_ICON_PRESET,
+  BUILTIN_ILLUSTRATION_PRESET,
+  BUILTIN_PORTRAIT_PRESET,
+  BUILTIN_LANDSCAPE_PRESET,
+  BUILTIN_PRODUCT_PRESET,
+  BUILTIN_ABSTRACT_PRESET,
+} from './builtin-presets';
 
 /**
  * 게임 에셋 테마
@@ -51,11 +61,11 @@ export const GAME_ASSET_THEME: PromptTheme = {
     },
   ],
 
-  presetBuilders: {
-    character: DEFAULT_CHARACTER_PRESET,
-    item: DEFAULT_ITEM_PRESET,
-    environment: DEFAULT_ENVIRONMENT_PRESET,
-  },
+  presetBuilders: [
+    BUILTIN_CHARACTER_PRESET,
+    BUILTIN_ITEM_PRESET,
+    BUILTIN_ENVIRONMENT_PRESET,
+  ],
 
   isDefault: true,
   isReadOnly: true,
@@ -100,10 +110,12 @@ export const WEB_CONTENT_THEME: PromptTheme = {
     },
   ],
 
-  presetBuilders: {
-    item: DEFAULT_ITEM_PRESET,
-    environment: DEFAULT_ENVIRONMENT_PRESET,
-  },
+  presetBuilders: [
+    BUILTIN_HERO_PRESET,
+    BUILTIN_BANNER_PRESET,
+    BUILTIN_ICON_PRESET,
+    BUILTIN_ILLUSTRATION_PRESET,
+  ],
 
   isDefault: true,
   isReadOnly: true,
@@ -154,11 +166,12 @@ export const GENERAL_PURPOSE_THEME: PromptTheme = {
     },
   ],
 
-  presetBuilders: {
-    character: DEFAULT_CHARACTER_PRESET,
-    item: DEFAULT_ITEM_PRESET,
-    environment: DEFAULT_ENVIRONMENT_PRESET,
-  },
+  presetBuilders: [
+    BUILTIN_PORTRAIT_PRESET,
+    BUILTIN_LANDSCAPE_PRESET,
+    BUILTIN_PRODUCT_PRESET,
+    BUILTIN_ABSTRACT_PRESET,
+  ],
 
   isDefault: true,
   isReadOnly: true,

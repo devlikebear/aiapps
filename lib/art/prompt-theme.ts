@@ -4,9 +4,7 @@
  */
 
 import type { ArtStyle, UsageType } from './types';
-import type { CharacterPreset } from './presets/character';
-import type { ItemPreset } from './presets/item';
-import type { EnvironmentPreset } from './presets/environment';
+import type { PresetBuilderSchema } from './preset-builder-schema';
 
 /**
  * 프롬프트 테마 인터페이스
@@ -26,13 +24,8 @@ export interface PromptTheme {
     example?: string;
   }>;
 
-  // 프리셋 빌더 설정
-  presetBuilders: {
-    character?: CharacterPreset;
-    item?: ItemPreset;
-    environment?: EnvironmentPreset;
-    // 추가 에셋 타입은 여기에
-  };
+  // 프리셋 빌더 스키마 배열 (유연한 구조)
+  presetBuilders: PresetBuilderSchema[];
 
   // 메타데이터
   isDefault: boolean;
