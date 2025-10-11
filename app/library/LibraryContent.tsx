@@ -18,11 +18,13 @@ import {
   CheckSquare,
   Square,
   Layers,
+  Wand2,
 } from 'lucide-react';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
 import { getAllImages, deleteImage } from '@/lib/storage/indexed-db';
 import ImageEditor from '@/components/art/ImageEditor';
 import ImageComposer from '@/components/art/ImageComposer';
+import StyleTransfer from '@/components/art/StyleTransfer';
 import type { StoredImage, StoredAudio } from '@/lib/types/storage';
 
 type MediaType = 'all' | 'audio' | 'image';
@@ -65,6 +67,10 @@ export default function LibraryContent() {
 
   // Image editor state
   const [editingImage, setEditingImage] = useState<ImageWithBlob | null>(null);
+
+  // Style transfer state
+  const [styleTransferImage, setStyleTransferImage] =
+    useState<ImageWithBlob | null>(null);
 
   // Multi-select state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -572,33 +578,47 @@ export default function LibraryContent() {
                           </div>
 
                           {!selectionMode && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingImage(image);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors"
-                              >
-                                <Edit className="w-3 h-3" />
-                                편집
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDownloadImage(image, 'png')
-                                }
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium text-gray-300 transition-colors"
-                              >
-                                <Download className="w-3 h-3" />
-                                PNG
-                              </button>
-                              <button
-                                onClick={() => handleDeleteImage(image.id)}
-                                className="px-2 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
-                              >
-                                <Trash2 className="w-3 h-3 text-red-400" />
-                              </button>
-                            </div>
+                            <>
+                              <div className="flex items-center gap-2 mb-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingImage(image);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                  편집
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setStyleTransferImage(image);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg text-xs font-medium transition-colors"
+                                >
+                                  <Wand2 className="w-3 h-3" />
+                                  스타일
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() =>
+                                    handleDownloadImage(image, 'png')
+                                  }
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium text-gray-300 transition-colors"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  PNG
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteImage(image.id)}
+                                  className="px-2 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
+                                >
+                                  <Trash2 className="w-3 h-3 text-red-400" />
+                                </button>
+                              </div>
+                            </>
                           )}
                         </div>
                       </div>
@@ -693,40 +713,54 @@ export default function LibraryContent() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setEditingImage(selectedImage);
-                    setSelectedImage(null);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-medium transition-colors"
-                >
-                  <Edit className="w-5 h-5" />
-                  이미지 편집
-                </button>
-                <button
-                  onClick={() => handleDownloadImage(selectedImage, 'png')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-medium transition-colors"
-                >
-                  <Download className="w-5 h-5" />
-                  PNG 다운로드
-                </button>
-                <button
-                  onClick={() => handleDownloadImage(selectedImage, 'jpg')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-medium transition-colors"
-                >
-                  <Download className="w-5 h-5" />
-                  JPG 다운로드
-                </button>
-                <button
-                  onClick={() => {
-                    handleDeleteImage(selectedImage.id);
-                    setSelectedImage(null);
-                  }}
-                  className="px-4 py-3 bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-colors"
-                >
-                  <Trash2 className="w-5 h-5 text-red-400" />
-                </button>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setEditingImage(selectedImage);
+                      setSelectedImage(null);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-medium transition-colors"
+                  >
+                    <Edit className="w-5 h-5" />
+                    이미지 편집
+                  </button>
+                  <button
+                    onClick={() => {
+                      setStyleTransferImage(selectedImage);
+                      setSelectedImage(null);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-medium transition-colors"
+                  >
+                    <Wand2 className="w-5 h-5" />
+                    스타일 전이
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleDownloadImage(selectedImage, 'png')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors"
+                  >
+                    <Download className="w-5 h-5" />
+                    PNG 다운로드
+                  </button>
+                  <button
+                    onClick={() => handleDownloadImage(selectedImage, 'jpg')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors"
+                  >
+                    <Download className="w-5 h-5" />
+                    JPG 다운로드
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDeleteImage(selectedImage.id);
+                      setSelectedImage(null);
+                    }}
+                    className="px-4 py-3 bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-colors"
+                  >
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -741,6 +775,22 @@ export default function LibraryContent() {
           onSave={() => {
             loadMedia();
             setEditingImage(null);
+          }}
+        />
+      )}
+
+      {/* Style Transfer Modal */}
+      {styleTransferImage && (
+        <StyleTransfer
+          baseImage={{
+            id: styleTransferImage.id,
+            dataUrl: styleTransferImage.blobUrl,
+            prompt: styleTransferImage.metadata.prompt,
+          }}
+          onClose={() => setStyleTransferImage(null)}
+          onSave={() => {
+            loadMedia();
+            setStyleTransferImage(null);
           }}
         />
       )}
