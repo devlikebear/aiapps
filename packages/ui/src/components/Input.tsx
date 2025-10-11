@@ -1,4 +1,5 @@
 import { InputHTMLAttributes, forwardRef } from 'react';
+import { clsx } from 'clsx';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -14,44 +15,59 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       error,
       helperText,
       fullWidth = false,
-      className = '',
+      className,
+      disabled,
       id,
       ...props
     },
     ref
   ) => {
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
-    const baseStyles =
-      'px-3 py-2 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1';
-    const errorStyles = error
-      ? 'border-red-500 focus:ring-red-500'
-      : 'border-gray-300 focus:ring-blue-500';
-    const widthStyles = fullWidth ? 'w-full' : '';
 
     return (
-      <div className={fullWidth ? 'w-full' : ''}>
+      <div className={clsx('space-y-1', { 'w-full': fullWidth })}>
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium text-gray-200"
           >
             {label}
           </label>
         )}
+
         <input
           ref={ref}
           id={inputId}
-          className={`${baseStyles} ${errorStyles} ${widthStyles} ${className}`}
+          disabled={disabled}
+          className={clsx(
+            // Base styles
+            'px-4 py-2 rounded-lg',
+            'bg-gray-800 border',
+            'text-white placeholder-gray-400',
+            'transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-offset-2',
+
+            // State styles
+            {
+              'border-gray-700 focus:border-purple-500 focus:ring-purple-500':
+                !error && !disabled,
+              'border-red-500 focus:border-red-500 focus:ring-red-500': error,
+              'opacity-50 cursor-not-allowed bg-gray-900': disabled,
+            },
+
+            // Full width
+            { 'w-full': fullWidth },
+
+            className
+          )}
           {...props}
         />
-        {error && (
-          <p className="mt-1 text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        )}
+
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className="text-xs text-gray-400">{helperText}</p>
         )}
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
     );
   }

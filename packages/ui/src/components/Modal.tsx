@@ -66,7 +66,7 @@ export const Modal = ({
 
       {/* Modal */}
       <div
-        className={`relative bg-white rounded-lg shadow-xl w-full ${sizeStyles[size]} max-h-[90vh] overflow-y-auto`}
+        className={`relative bg-gray-900 border border-gray-800 rounded-lg shadow-xl w-full ${sizeStyles[size]} max-h-[90vh] overflow-y-auto`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
@@ -74,16 +74,16 @@ export const Modal = ({
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-800">
             <h2
               id="modal-title"
-              className="text-lg font-semibold text-gray-900"
+              className="text-lg font-semibold text-gray-100"
             >
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-300 transition-colors"
               aria-label="Close modal"
             >
               <svg
