@@ -21,10 +21,12 @@
 - **ImageEditor 컴포넌트**: 마스크 기반 편집, Before/After 비교 ✅
 - **라이브러리 통합**: 통합 미디어 라이브러리에 갤러리 기능 통합 ✅
 - **공유 UI 컴포넌트**: `@aiapps/ui` 패키지 구성 완료 ✅
+- **이미지 합성**: `/api/art/compose` 엔드포인트 구현 완료 ✅
+- **ImageComposer 컴포넌트**: 다중 이미지 합성, 프롬프트 가이드 ✅
+- **라이브러리 멀티 셀렉트**: 이미지 선택 모드 및 합성 통합 ✅
 
 ### ❌ 미구현 기능
 
-- **이미지 합성**: `/api/art/compose` 엔드포인트 없음
 - **스타일 전이**: `/api/art/style-transfer` 엔드포인트 없음
 - **고급 검색**: 텍스트 검색, 다중 필터 없음
 - **프리셋 관리**: 사용자 정의 프리셋 저장 불가
@@ -73,37 +75,32 @@
 
 ---
 
-#### 1.2 이미지 합성 기능 구현
+#### 1.2 이미지 합성 기능 구현 ✅ **완료**
 
 **목표**: 여러 이미지를 합성하여 새로운 이미지 생성
 
 **작업 항목**:
-- [ ] `app/api/art/compose/route.ts` 구현
-  - 다중 이미지 입력 처리
+
+- [x] `app/api/art/compose/route.ts` 구현 ✅
+  - 다중 이미지 입력 처리 (2-10개)
   - 합성 프롬프트 적용
-  - 레이아웃 제어 (위치, 크기)
-- [ ] `components/art/ImageComposer.tsx` 구현
-  - 이미지 선택 UI (갤러리에서)
-  - 드래그 앤 드롭 레이아웃
-  - 합성 프롬프트 입력
-  - 미리보기
-- [ ] 갤러리에서 다중 선택 모드 추가
-- [ ] 합성 이미지 메타데이터 저장
+  - Gemini 2.5 Flash Image API 사용
+- [x] `components/art/ImageComposer.tsx` 구현 ✅
+  - 이미지 선택 UI (파일 업로드)
+  - 합성 프롬프트 입력 및 예시
+  - 이미지 추가/제거 기능
+  - 합성 결과 미리보기
+- [x] 라이브러리에서 다중 선택 모드 추가 ✅
+  - 선택 모드 토글 버튼
+  - 이미지 카드 체크박스
+  - 플로팅 "이미지 합성" 버튼
+- [x] 합성 이미지 메타데이터 저장 ✅
 
-**API 예시**:
-```typescript
-// POST /api/art/compose
-{
-  "images": [
-    { "data": "base64...", "position": "left" },
-    { "data": "base64...", "position": "right" }
-  ],
-  "prompt": "Combine these characters in a fantasy forest scene",
-  "resolution": "1024x1024"
-}
-```
+**완료된 PR**:
 
-**예상 소요**: 2-3일
+- PR #51: 이미지 합성 기능 구현 (API + ImageComposer + 라이브러리 통합)
+
+**실제 소요**: 1일
 
 ---
 
@@ -1623,7 +1620,7 @@ npm install --save-dev @types/jszip @types/file-saver
 | 2025-10-11 | Phase 1.1: 이미지 편집 기능 구현 (PR #42, #46, #47) | ✅ 완료 |
 | 2025-10-11 | 라이브러리 통합 (PR #43, #44, #45) | ✅ 완료 |
 | 2025-10-11 | Phase 4.1: 공유 UI 컴포넌트 라이브러리 (PR #48, #49) | ✅ 완료 |
-| - | Phase 1.2: 이미지 합성 기능 | ⏳ 대기 |
+| 2025-10-11 | Phase 1.2: 이미지 합성 기능 구현 (PR #51) | ✅ 완료 |
 | - | Phase 1.3: 스타일 전이 기능 | ⏳ 대기 |
 | - | Phase 2 시작 | ⏳ 대기 |
 | - | Phase 3 시작 | ⏳ 대기 |
@@ -1646,14 +1643,20 @@ npm install --save-dev @types/jszip @types/file-saver
    - 8개 공통 컴포넌트 (Button, Input, Select, Card, Modal, Toast, LoadingSpinner, ErrorMessage)
    - PR #48, #49 완료
 
+4. ✅ **Phase 1.2 완료**: 이미지 합성 기능 구현
+   - `/api/art/compose` 엔드포인트 구현
+   - ImageComposer 컴포넌트 개발
+   - 라이브러리 멀티 셀렉트 모드 통합
+   - PR #51 완료
+
 ### 🎯 다음 추천 작업
 
-**옵션 1: Phase 1.2 - 이미지 합성 기능 구현** (2-3일)
+**옵션 1: Phase 1.3 - 스타일 전이 기능 구현** (2-3일)
 
-- 여러 이미지를 합성하여 새로운 이미지 생성
-- `/api/art/compose` 엔드포인트 구현
-- `ImageComposer` 컴포넌트 생성
-- 갤러리 다중 선택 모드 추가
+- 한 이미지의 스타일을 다른 이미지에 적용
+- `/api/art/style-transfer` 엔드포인트 구현
+- `StyleTransfer` 컴포넌트 생성
+- 스타일 강도 조절 및 미리보기
 
 **옵션 2: Phase 1.4 - 갤러리 검색 및 필터링 강화** (1-2일)
 
