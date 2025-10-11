@@ -8,11 +8,7 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
-  argTypes: {
-    showRetry: {
-      control: 'boolean',
-    },
-  },
+  argTypes: {},
 } satisfies Meta<typeof ErrorMessage>;
 
 export default meta;
@@ -27,7 +23,6 @@ export const Default: Story = {
 export const WithRetry: Story = {
   args: {
     message: 'Failed to load data. Please try again.',
-    showRetry: true,
     onRetry: () => alert('Retry clicked!'),
   },
 };
@@ -36,7 +31,6 @@ export const LongMessage: Story = {
   args: {
     message:
       'An unexpected error occurred while processing your request. This could be due to a network issue or a problem with the server. Please check your connection and try again.',
-    showRetry: true,
     onRetry: () => alert('Retry clicked!'),
   },
 };
@@ -53,7 +47,6 @@ export const AllStates: Story = {
       <ErrorMessage message="Simple error message" />
       <ErrorMessage
         message="Error with retry button"
-        showRetry
         onRetry={() => alert('Retry!')}
       />
       <ErrorMessage message="Very long error message that wraps to multiple lines and provides detailed information about what went wrong." />
