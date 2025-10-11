@@ -515,7 +515,7 @@ export function ThemeManagementModal({
                   <div className="space-y-3">
                     {presetBuilders.map((preset, index) => (
                       <div
-                        key={preset.id}
+                        key={`${preset.id}-${index}`}
                         className="border border-gray-700 rounded-lg overflow-hidden"
                       >
                         <div className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50">
