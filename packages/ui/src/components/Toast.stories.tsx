@@ -35,7 +35,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const ToastWithButton = (props: any) => {
+const ToastWithButton = (props: React.ComponentProps<typeof Toast>) => {
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -154,48 +154,50 @@ export const LongDuration: Story = {
   ),
 };
 
-export const AllTypes: Story = {
-  render: () => {
-    const [toasts, setToasts] = useState<
-      Array<{ id: number; type: 'success' | 'error' | 'warning' | 'info' }>
-    >([]);
+const AllTypesDemo = () => {
+  const [toasts, setToasts] = useState<
+    Array<{ id: number; type: 'success' | 'error' | 'warning' | 'info' }>
+  >([]);
 
-    const showToast = (type: 'success' | 'error' | 'warning' | 'info') => {
-      const id = Date.now();
-      setToasts([...toasts, { id, type }]);
-    };
+  const showToast = (type: 'success' | 'error' | 'warning' | 'info') => {
+    const id = Date.now();
+    setToasts([...toasts, { id, type }]);
+  };
 
-    const removeToast = (id: number) => {
-      setToasts(toasts.filter((t) => t.id !== id));
-    };
+  const removeToast = (id: number) => {
+    setToasts(toasts.filter((t) => t.id !== id));
+  };
 
-    return (
-      <div>
-        <div className="flex gap-2">
-          <Button onClick={() => showToast('success')} size="sm">
-            Success
-          </Button>
-          <Button onClick={() => showToast('error')} size="sm">
-            Error
-          </Button>
-          <Button onClick={() => showToast('warning')} size="sm">
-            Warning
-          </Button>
-          <Button onClick={() => showToast('info')} size="sm">
-            Info
-          </Button>
-        </div>
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            type={toast.type}
-            message={`This is a ${toast.type} message`}
-            position="top-right"
-            duration={3000}
-            onClose={() => removeToast(toast.id)}
-          />
-        ))}
+  return (
+    <div>
+      <div className="flex gap-2">
+        <Button onClick={() => showToast('success')} size="sm">
+          Success
+        </Button>
+        <Button onClick={() => showToast('error')} size="sm">
+          Error
+        </Button>
+        <Button onClick={() => showToast('warning')} size="sm">
+          Warning
+        </Button>
+        <Button onClick={() => showToast('info')} size="sm">
+          Info
+        </Button>
       </div>
-    );
-  },
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          type={toast.type}
+          message={`This is a ${toast.type} message`}
+          position="top-right"
+          duration={3000}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+    </div>
+  );
+};
+
+export const AllTypes: Story = {
+  render: () => <AllTypesDemo />,
 };

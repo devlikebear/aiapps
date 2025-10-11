@@ -24,7 +24,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const ModalWithButton = (props: any) => {
+const ModalWithButton = (props: React.ComponentProps<typeof Modal>) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -93,50 +93,52 @@ export const NoBackdropClose: Story = {
   ),
 };
 
-export const WithForm: Story = {
-  render: () => {
-    const [isOpen, setIsOpen] = useState(false);
+const FormModal = () => {
+  const [isOpen, setIsOpen] = useState(false);
 
-    return (
-      <>
-        <Button onClick={() => setIsOpen(true)}>Open Form Modal</Button>
-        <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Login">
-          <form className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                placeholder="your@email.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="primary" fullWidth>
-                Login
-              </Button>
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setIsOpen(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      </>
-    );
-  },
+  return (
+    <>
+      <Button onClick={() => setIsOpen(true)}>Open Form Modal</Button>
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Login">
+        <form className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-200 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+              placeholder="your@email.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-200 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="primary" fullWidth>
+              Login
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  );
+};
+
+export const WithForm: Story = {
+  render: () => <FormModal />,
 };
