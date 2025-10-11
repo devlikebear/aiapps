@@ -162,7 +162,12 @@ export function ThemeSelector({
               </button>
             )}
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                if (onManageThemes) {
+                  onManageThemes();
+                }
+                setIsOpen(false);
+              }}
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-700 rounded-lg transition-colors text-sm text-gray-300"
             >
               <Plus className="w-4 h-4" />새 테마 만들기

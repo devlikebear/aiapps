@@ -19,6 +19,7 @@ import { CharacterPromptForm } from '@/components/art/CharacterPromptForm';
 import { ItemPromptForm } from '@/components/art/ItemPromptForm';
 import { EnvironmentPromptForm } from '@/components/art/EnvironmentPromptForm';
 import { ThemeSelector } from '@/components/art/ThemeSelector';
+import { ThemeManagementModal } from '@/components/art/ThemeManagementModal';
 import { estimateGenerationCost } from '@/lib/art/utils';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
@@ -89,6 +90,7 @@ export default function ArtCreatePage() {
     Array<{ value: ArtStyle; label: string; description: string }>
   >([]);
   const [style, setStyle] = useState<ArtStyle>('pixel-art');
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
 
   // Handle theme change
   const handleThemeChange = (theme: PromptTheme) => {
@@ -385,6 +387,7 @@ export default function ArtCreatePage() {
               usageType={usageType}
               selectedThemeId={currentTheme?.id}
               onThemeChange={handleThemeChange}
+              onManageThemes={() => setIsThemeModalOpen(true)}
             />
             <p className="mt-2 text-xs text-gray-500">
               {currentTheme?.description ||
@@ -955,6 +958,16 @@ export default function ArtCreatePage() {
           </div>
         )}
       </div>
+
+      {/* Theme Management Modal */}
+      <ThemeManagementModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        onThemeCreated={(theme) => {
+          handleThemeChange(theme);
+          setIsThemeModalOpen(false);
+        }}
+      />
     </div>
   );
 }
