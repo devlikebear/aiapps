@@ -6,6 +6,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/react';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
+import ToastContainer from '@/components/ui/Toast';
 
 export const metadata: Metadata = {
   title: 'AI Tools Hub - Curated AI-Powered Creative Apps',
@@ -38,6 +39,7 @@ export default function RootLayout({
         </a>
         <GlobalNav />
         <JobProvider />
+        <ToastContainer />
         <ErrorBoundary>
           <main id="main-content" role="main">
             {children}

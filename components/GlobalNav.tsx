@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Search, Music, ImageIcon, Library } from 'lucide-react';
 import { hasApiKey } from '@/lib/api-key/storage';
 import ApiKeySettings from './ApiKeySettings';
+import JobQueueButton from '@/components/queue/JobQueueButton';
 
 interface App {
   id: string;
@@ -145,8 +146,11 @@ function GlobalNav() {
               </Link>
             </div>
 
-            {/* Right - Search & Settings */}
+            {/* Right - Queue, Search & Settings */}
             <div className="flex items-center gap-3">
+              {/* Job Queue Button */}
+              <JobQueueButton />
+
               {/* App Search (Desktop) */}
               <div className="hidden lg:block relative">
                 <button
