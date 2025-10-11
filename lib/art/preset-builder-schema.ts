@@ -31,6 +31,14 @@ export type PresetFieldUnit =
   | 'ms';
 
 /**
+ * 프롬프트 포맷 타입
+ */
+export type PromptFormat =
+  | 'natural' // 자연스러운 문장 형태: "male, human, warrior, young adult"
+  | 'key-value' // 키-값 형태: "성별=남성, 종족=인간, 클래스=전사"
+  | 'json'; // JSON 형태: {"gender": "male", "race": "human", "class": "warrior"}
+
+/**
  * 프리셋 필드 정의
  */
 export interface PresetField {
@@ -79,6 +87,9 @@ export interface PresetBuilderSchema {
   icon?: string; // 프리셋 아이콘 (이모지)
   groups: PresetGroup[];
 
+  // 프롬프트 생성 옵션
+  promptFormat?: PromptFormat; // 프롬프트 포맷 (기본값: natural)
+
   // 메타데이터
   isBuiltIn: boolean; // 빌트인 프리셋 여부
   usageType?: 'game' | 'web' | 'general'; // 사용 목적 분류
@@ -117,18 +128,23 @@ export function interpolatePromptTemplate(
  * 프리셋 빌더에서 전체 프롬프트 생성
  */
 export function buildPromptFromSchema(schema: PresetBuilderSchema): string {
-  const prompts: string[] = [];
-
   // groups가 없으면 빈 문자열 반환
   if (!schema.groups || !Array.isArray(schema.groups)) {
     return '';
   }
 
-  // 그룹을 order 순으로 정렬
+  const format = schema.promptFormat || 'natural';
+
+  // JSON 형태
+  if (format === 'json') {
+    return buildJsonPrompt(schema);
+  }
+
+  // Natural 또는 Key-Value 형태
+  const prompts: string[] = [];
   const sortedGroups = [...schema.groups].sort((a, b) => a.order - b.order);
 
   for (const group of sortedGroups) {
-    // 필드를 order 순으로 정렬
     const sortedFields = [...group.fields].sort((a, b) => a.order - b.order);
 
     for (const field of sortedFields) {
@@ -142,18 +158,75 @@ export function buildPromptFromSchema(schema: PresetBuilderSchema): string {
         continue;
       }
 
-      const prompt = interpolatePromptTemplate(
-        field.promptTemplate,
-        field.value,
-        field.unit
-      );
-      if (prompt) {
-        prompts.push(prompt);
+      if (format === 'key-value') {
+        // Key-Value 형태: "레이블=값"
+        const value = Array.isArray(field.value)
+          ? field.value.join(', ')
+          : String(field.value);
+        const unit = field.unit || '';
+        prompts.push(`${field.label}=${value}${unit}`);
+      } else {
+        // Natural 형태: 템플릿 기반
+        const prompt = interpolatePromptTemplate(
+          field.promptTemplate,
+          field.value,
+          field.unit
+        );
+        if (prompt) {
+          prompts.push(prompt);
+        }
       }
     }
   }
 
   return prompts.join(', ');
+}
+
+/**
+ * JSON 형태 프롬프트 생성
+ */
+function buildJsonPrompt(schema: PresetBuilderSchema): string {
+  const result: Record<string, unknown> = {};
+
+  if (!schema.groups || !Array.isArray(schema.groups)) {
+    return '{}';
+  }
+
+  const sortedGroups = [...schema.groups].sort((a, b) => a.order - b.order);
+
+  for (const group of sortedGroups) {
+    const sortedFields = [...group.fields].sort((a, b) => a.order - b.order);
+    const groupData: Record<string, unknown> = {};
+
+    for (const field of sortedFields) {
+      // 값이 비어있으면 스킵
+      if (
+        field.value === '' ||
+        field.value === undefined ||
+        field.value === null ||
+        (Array.isArray(field.value) && field.value.length === 0)
+      ) {
+        continue;
+      }
+
+      // 필드 ID를 키로 사용 (camelCase)
+      const key = field.id.replace(/^[^-]+-/, ''); // 'char-gender' -> 'gender'
+
+      if (field.unit) {
+        groupData[key] = `${field.value}${field.unit}`;
+      } else {
+        groupData[key] = field.value;
+      }
+    }
+
+    // 그룹이 비어있지 않으면 추가
+    if (Object.keys(groupData).length > 0) {
+      const groupKey = group.id.replace(/^[^-]+-/, ''); // 'char-basic' -> 'basic'
+      result[groupKey] = groupData;
+    }
+  }
+
+  return JSON.stringify(result, null, 2);
 }
 
 /**

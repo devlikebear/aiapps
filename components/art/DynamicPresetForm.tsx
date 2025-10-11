@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type {
   PresetBuilderSchema,
   PresetField,
+  PromptFormat,
 } from '@/lib/art/preset-builder-schema';
 
 interface DynamicPresetFormProps {
@@ -61,8 +62,59 @@ export function DynamicPresetForm({
     onChange(updatedSchema);
   };
 
+  const handleFormatChange = (format: PromptFormat) => {
+    onChange({ ...schema, promptFormat: format });
+  };
+
   return (
     <div className="space-y-4">
+      {/* 프롬프트 포맷 선택 */}
+      <div className="pb-4 border-b border-gray-700">
+        <label className="block text-sm font-medium mb-2">프롬프트 포맷</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleFormatChange('natural')}
+            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+              (schema.promptFormat || 'natural') === 'natural'
+                ? 'bg-purple-500 text-white'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            }`}
+          >
+            자연어
+          </button>
+          <button
+            type="button"
+            onClick={() => handleFormatChange('key-value')}
+            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+              schema.promptFormat === 'key-value'
+                ? 'bg-purple-500 text-white'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            }`}
+          >
+            키-값
+          </button>
+          <button
+            type="button"
+            onClick={() => handleFormatChange('json')}
+            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+              schema.promptFormat === 'json'
+                ? 'bg-purple-500 text-white'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            }`}
+          >
+            JSON
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          {schema.promptFormat === 'key-value' &&
+            '키-값 형태: "성별=male, 종족=human, 클래스=warrior"'}
+          {schema.promptFormat === 'json' &&
+            'JSON 형태: {"basic": {"gender": "male", "race": "human"}}'}
+          {(!schema.promptFormat || schema.promptFormat === 'natural') &&
+            '자연어 형태: "male, human, warrior, young adult"'}
+        </p>
+      </div>
       {groups
         .sort((a, b) => a.order - b.order)
         .map((group) => (
