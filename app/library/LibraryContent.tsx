@@ -15,10 +15,14 @@ import {
   Calendar,
   Edit,
   X,
+  CheckSquare,
+  Square,
+  Layers,
 } from 'lucide-react';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
 import { getAllImages, deleteImage } from '@/lib/storage/indexed-db';
 import ImageEditor from '@/components/art/ImageEditor';
+import ImageComposer from '@/components/art/ImageComposer';
 import type { StoredImage, StoredAudio } from '@/lib/types/storage';
 
 type MediaType = 'all' | 'audio' | 'image';
@@ -61,6 +65,13 @@ export default function LibraryContent() {
 
   // Image editor state
   const [editingImage, setEditingImage] = useState<ImageWithBlob | null>(null);
+
+  // Multi-select state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
+
+  // Image composer state
+  const [showComposer, setShowComposer] = useState(false);
 
   // Update tab from URL
   useEffect(() => {
@@ -171,6 +182,37 @@ export default function LibraryContent() {
         setSelectedImage(null);
       }
     }
+  };
+
+  // Multi-select handlers
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedImageIds([]);
+  };
+
+  const toggleImageSelection = (id: string) => {
+    setSelectedImageIds((prev) =>
+      prev.includes(id) ? prev.filter((imgId) => imgId !== id) : [...prev, id]
+    );
+  };
+
+  const handleOpenComposer = () => {
+    if (selectedImageIds.length < 2) {
+      alert('이미지를 2개 이상 선택해주세요');
+      return;
+    }
+    setShowComposer(true);
+  };
+
+  const handleComposerClose = () => {
+    setShowComposer(false);
+    setSelectionMode(false);
+    setSelectedImageIds([]);
+  };
+
+  const handleComposerSave = () => {
+    loadMedia();
+    handleComposerClose();
   };
 
   // Toggle tag selection
@@ -442,19 +484,49 @@ export default function LibraryContent() {
             {(activeTab === 'all' || activeTab === 'image') &&
               filteredImages.length > 0 && (
                 <div>
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
-                    <ImageIcon className="w-6 h-6 text-pink-400" />
-                    이미지 ({filteredImages.length})
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+                      <ImageIcon className="w-6 h-6 text-pink-400" />
+                      이미지 ({filteredImages.length})
+                    </h2>
+                    <button
+                      onClick={toggleSelectionMode}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        selectionMode
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {selectionMode ? (
+                        <>
+                          <CheckSquare className="w-5 h-5" />
+                          선택 완료
+                        </>
+                      ) : (
+                        <>
+                          <Square className="w-5 h-5" />
+                          이미지 선택
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {filteredImages.map((image) => (
                       <div
                         key={image.id}
-                        className="bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700 hover:border-pink-500 transition-all group"
+                        className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border transition-all group ${
+                          selectionMode && selectedImageIds.includes(image.id)
+                            ? 'border-purple-500 ring-2 ring-purple-500'
+                            : 'border-gray-700 hover:border-pink-500'
+                        }`}
                       >
                         <div
                           className="relative aspect-square cursor-pointer"
-                          onClick={() => setSelectedImage(image)}
+                          onClick={() =>
+                            selectionMode
+                              ? toggleImageSelection(image.id)
+                              : setSelectedImage(image)
+                          }
                         >
                           {image.blobUrl && (
                             <Image
@@ -464,9 +536,26 @@ export default function LibraryContent() {
                               className="object-cover"
                             />
                           )}
+                          {selectionMode && (
+                            <div className="absolute top-2 right-2 z-10">
+                              {selectedImageIds.includes(image.id) ? (
+                                <CheckSquare className="w-8 h-8 text-purple-400 bg-gray-900/80 rounded p-1" />
+                              ) : (
+                                <Square className="w-8 h-8 text-gray-400 bg-gray-900/80 rounded p-1" />
+                              )}
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Search className="w-8 h-8 text-white" />
+                              {selectionMode ? (
+                                selectedImageIds.includes(image.id) ? (
+                                  <CheckSquare className="w-8 h-8 text-purple-400" />
+                                ) : (
+                                  <Square className="w-8 h-8 text-white" />
+                                )
+                              ) : (
+                                <Search className="w-8 h-8 text-white" />
+                              )}
                             </div>
                           </div>
                         </div>
@@ -482,31 +571,35 @@ export default function LibraryContent() {
                             ).toLocaleDateString('ko-KR')}
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingImage(image);
-                              }}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors"
-                            >
-                              <Edit className="w-3 h-3" />
-                              편집
-                            </button>
-                            <button
-                              onClick={() => handleDownloadImage(image, 'png')}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium text-gray-300 transition-colors"
-                            >
-                              <Download className="w-3 h-3" />
-                              PNG
-                            </button>
-                            <button
-                              onClick={() => handleDeleteImage(image.id)}
-                              className="px-2 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
-                            >
-                              <Trash2 className="w-3 h-3 text-red-400" />
-                            </button>
-                          </div>
+                          {!selectionMode && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingImage(image);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors"
+                              >
+                                <Edit className="w-3 h-3" />
+                                편집
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDownloadImage(image, 'png')
+                                }
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium text-gray-300 transition-colors"
+                              >
+                                <Download className="w-3 h-3" />
+                                PNG
+                              </button>
+                              <button
+                                onClick={() => handleDeleteImage(image.id)}
+                                className="px-2 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3 text-red-400" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -649,6 +742,33 @@ export default function LibraryContent() {
             loadMedia();
             setEditingImage(null);
           }}
+        />
+      )}
+
+      {/* Floating Compose Button */}
+      {selectionMode && selectedImageIds.length >= 2 && (
+        <div className="fixed bottom-8 right-8 z-40">
+          <button
+            onClick={handleOpenComposer}
+            className="flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-full text-white font-semibold shadow-xl transition-all transform hover:scale-105"
+          >
+            <Layers className="w-5 h-5" />
+            이미지 합성 ({selectedImageIds.length})
+          </button>
+        </div>
+      )}
+
+      {/* Image Composer Modal */}
+      {showComposer && (
+        <ImageComposer
+          initialImages={imageList
+            .filter((img) => selectedImageIds.includes(img.id))
+            .map((img) => ({
+              id: img.id,
+              dataUrl: img.blobUrl,
+            }))}
+          onClose={handleComposerClose}
+          onSave={handleComposerSave}
         />
       )}
     </div>
