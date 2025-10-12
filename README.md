@@ -372,7 +372,7 @@ npx playwright test --project=chromium
 ## 📞 문의
 
 - **이슈**: [GitHub Issues](https://github.com/devlikebear/aiapps/issues)
-- **이메일**: devlikebear@example.com
+- **이메일**: devlikebear@gmail.com
 - **문서**: [프로젝트 문서](./CLAUDE.md)
 
 ---

@@ -424,7 +424,7 @@ Issue #번호를 간단히 설명합니다.
 
 - **GitHub Discussions**: 일반적인 질문
 - **GitHub Issues**: 버그 리포트 및 기능 요청
-- **이메일**: devlikebear@example.com
+- **이메일**: devlikebear@gmail.com
 
 ---
 
