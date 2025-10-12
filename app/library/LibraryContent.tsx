@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -26,6 +26,7 @@ import {
   Upload,
   FileArchive,
   Loader2,
+  Clock,
 } from 'lucide-react';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
 import { getAllImages, deleteImage } from '@/lib/storage/indexed-db';
@@ -43,6 +44,8 @@ import {
   type ImportProgressCallback,
   type DuplicateStrategy,
 } from '@/lib/utils/gallery-import';
+import { useJobQueueStore } from '@/stores/job-queue-store';
+import type { Job } from '@/lib/queue';
 
 type MediaType = 'all' | 'audio' | 'image';
 
@@ -55,6 +58,46 @@ interface AudioWithBlob extends StoredAudio {
 interface ImageWithBlob extends StoredImage {
   blobUrl: string;
 }
+
+const JOB_LABEL: Record<Job['type'], string> = {
+  'audio-generate': '오디오 생성',
+  'image-generate': '이미지 생성',
+  'image-edit': '이미지 편집',
+  'image-compose': '이미지 합성',
+  'image-style-transfer': '스타일 전이',
+};
+
+const getJobPromptSnippet = (job: Job): string => {
+  switch (job.type) {
+    case 'audio-generate':
+    case 'image-generate':
+    case 'image-edit':
+      return job.params.prompt;
+    case 'image-style-transfer':
+      return job.params.stylePrompt;
+    case 'image-compose':
+      return `${job.params.images.length}개의 이미지`;
+    default:
+      return '';
+  }
+};
+
+const jobStatusDisplay = (status: Job['status']): string => {
+  switch (status) {
+    case 'pending':
+      return '대기 중';
+    case 'processing':
+      return '처리 중';
+    case 'completed':
+      return '완료';
+    case 'failed':
+      return '실패';
+    case 'cancelled':
+      return '취소됨';
+    default:
+      return status;
+  }
+};
 
 export default function LibraryContent() {
   const searchParams = useSearchParams();
@@ -104,6 +147,20 @@ export default function LibraryContent() {
   const [styleTransferImage, setStyleTransferImage] =
     useState<ImageWithBlob | null>(null);
 
+  // Job queue state
+  const queueJobs = useJobQueueStore((state) => state.jobs);
+  const openManager = useJobQueueStore((state) => state.openManager);
+
+  const inProgressJobs = useMemo(
+    () =>
+      queueJobs.filter(
+        (job) =>
+          job.type !== 'audio-generate' &&
+          (job.status === 'pending' || job.status === 'processing')
+      ),
+    [queueJobs]
+  );
+
   // Multi-select state
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
@@ -130,12 +187,7 @@ export default function LibraryContent() {
     }
   }, [urlTab, activeTab]);
 
-  // Load media from IndexedDB
-  useEffect(() => {
-    loadMedia();
-  }, []);
-
-  const loadMedia = async () => {
+  const loadMedia = useCallback(async () => {
     setIsLoading(true);
     try {
       const [audio, images] = await Promise.all([
@@ -180,7 +232,32 @@ export default function LibraryContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Load media from IndexedDB
+  useEffect(() => {
+    loadMedia();
+  }, [loadMedia]);
+
+  const lastQueueSyncRef = useRef<number>(0);
+
+  useEffect(() => {
+    const latestCompleted = queueJobs
+      .filter(
+        (job) =>
+          job.status === 'completed' && typeof job.completedAt === 'number'
+      )
+      .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))[0];
+
+    if (
+      latestCompleted &&
+      typeof latestCompleted.completedAt === 'number' &&
+      latestCompleted.completedAt > lastQueueSyncRef.current
+    ) {
+      lastQueueSyncRef.current = latestCompleted.completedAt;
+      loadMedia();
+    }
+  }, [queueJobs, loadMedia]);
 
   // Audio player controls
   const togglePlayAudio = (audioId: string, blobUrl: string) => {
@@ -836,6 +913,59 @@ export default function LibraryContent() {
                       </button>
                     </div>
                   </div>
+                  {inProgressJobs.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                        진행 중인 작업
+                      </h3>
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {inProgressJobs.map((job) => (
+                          <button
+                            type="button"
+                            key={job.id}
+                            onClick={openManager}
+                            className="bg-gray-800/60 border border-gray-700 hover:border-purple-500 transition-all rounded-xl p-4 text-left"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-semibold text-white">
+                                {JOB_LABEL[job.type]}
+                              </div>
+                              <span className="text-xs text-gray-400">
+                                {jobStatusDisplay(job.status)}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-gray-300 line-clamp-2">
+                              {getJobPromptSnippet(job)}
+                            </p>
+                            <div className="mt-4 flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-purple-500 transition-all duration-300"
+                                  style={{ width: `${job.progress}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-300 w-8 text-right">
+                                {job.progress}%
+                              </span>
+                            </div>
+                            <div className="mt-3 text-[11px] text-gray-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                생성{' '}
+                                {new Date(job.createdAt).toLocaleTimeString(
+                                  'ko-KR'
+                                )}
+                              </span>
+                              <span className="ml-auto text-purple-300 text-[11px]">
+                                클릭하여 큐 보기
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {paginatedImages.map((image) => (
                       <div

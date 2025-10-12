@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XCircle, Music, ImageIcon } from 'lucide-react';
+import { XCircle, Music, ImageIcon, Layers } from 'lucide-react';
 import { jobQueue } from '@/lib/queue/job-queue';
-import type { JobEvent, AudioJob, ImageJob } from '@/lib/queue/types';
+import type { JobEvent, Job } from '@/lib/queue/types';
 
 interface ToastItem {
   id: string;
@@ -17,26 +17,54 @@ interface ToastItem {
 export default function JobToast() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  const getJobCategory = (job: Job) => {
+    switch (job.type) {
+      case 'audio-generate':
+        return { label: '오디오', icon: <Music className="w-5 h-5" /> };
+      case 'image-generate':
+      case 'image-edit':
+      case 'image-style-transfer':
+        return { label: '이미지', icon: <ImageIcon className="w-5 h-5" /> };
+      case 'image-compose':
+        return { label: '합성', icon: <Layers className="w-5 h-5" /> };
+      default:
+        return { label: '작업', icon: <ImageIcon className="w-5 h-5" /> };
+    }
+  };
+
+  const getJobMessageSnippet = (job: Job) => {
+    switch (job.type) {
+      case 'audio-generate':
+      case 'image-generate':
+      case 'image-edit':
+        return job.params.prompt.slice(0, 30);
+      case 'image-style-transfer':
+        return job.params.stylePrompt.slice(0, 30);
+      case 'image-compose':
+        return `${job.params.images.length}개 이미지 합성`;
+      default:
+        return '';
+    }
+  };
+
   useEffect(() => {
     // 작업 완료 이벤트 리스너
     const handleJobCompleted = (event: JobEvent) => {
       const job = event.job;
-      const isAudio = job.type === 'audio';
+      const { label, icon } = getJobCategory(job);
+      const snippet = getJobMessageSnippet(job);
 
       setToasts((prev) => [
         ...prev,
         {
           id: `${event.jobId}-completed-${Date.now()}`,
           type: 'success',
-          icon: isAudio ? (
-            <Music className="w-5 h-5" />
-          ) : (
-            <ImageIcon className="w-5 h-5" />
-          ),
-          title: `${isAudio ? '오디오' : '이미지'} 생성 완료`,
-          message: `"${
-            (job as AudioJob | ImageJob).params.prompt.slice(0, 30) + '...'
-          }" 생성이 완료되었습니다.`,
+          icon,
+          title: `${label} 작업 완료`,
+          message:
+            snippet.length > 0
+              ? `"${snippet}..." 작업이 완료되었습니다.`
+              : '작업이 완료되었습니다.',
           timestamp: Date.now(),
         },
       ]);
@@ -45,19 +73,15 @@ export default function JobToast() {
     // 작업 실패 이벤트 리스너
     const handleJobFailed = (event: JobEvent) => {
       const job = event.job;
-      const isAudio = job.type === 'audio';
+      const { label, icon } = getJobCategory(job);
 
       setToasts((prev) => [
         ...prev,
         {
           id: `${event.jobId}-failed-${Date.now()}`,
           type: 'error',
-          icon: isAudio ? (
-            <Music className="w-5 h-5" />
-          ) : (
-            <ImageIcon className="w-5 h-5" />
-          ),
-          title: `${isAudio ? '오디오' : '이미지'} 생성 실패`,
+          icon,
+          title: `${label} 작업 실패`,
           message: job.error || '알 수 없는 오류가 발생했습니다.',
           timestamp: Date.now(),
         },
@@ -67,20 +91,16 @@ export default function JobToast() {
     // 작업 시작 이벤트 리스너
     const handleJobStarted = (event: JobEvent) => {
       const job = event.job;
-      const isAudio = job.type === 'audio';
+      const { label, icon } = getJobCategory(job);
 
       setToasts((prev) => [
         ...prev,
         {
           id: `${event.jobId}-started-${Date.now()}`,
           type: 'info',
-          icon: isAudio ? (
-            <Music className="w-5 h-5" />
-          ) : (
-            <ImageIcon className="w-5 h-5" />
-          ),
-          title: `${isAudio ? '오디오' : '이미지'} 생성 시작`,
-          message: `백그라운드에서 생성 중입니다...`,
+          icon,
+          title: `${label} 작업 시작`,
+          message: `백그라운드에서 작업을 처리 중입니다...`,
           timestamp: Date.now(),
         },
       ]);

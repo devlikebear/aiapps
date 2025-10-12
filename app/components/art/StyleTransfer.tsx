@@ -6,6 +6,7 @@ import { X, Wand2, Save, Upload } from 'lucide-react';
 import { saveImage } from '@/lib/storage/indexed-db';
 import { getApiKey } from '@/lib/api-key/storage';
 import { toast } from '@/components/ui/Toast';
+import { jobQueue } from '@/lib/queue';
 
 interface StyleTransferProps {
   baseImage: {
@@ -66,6 +67,8 @@ export default function StyleTransfer({
 
     setIsTransferring(true);
 
+    let jobId: string | null = null;
+
     try {
       const apiKey = getApiKey('gemini');
       if (!apiKey) {
@@ -79,6 +82,14 @@ export default function StyleTransfer({
       if (referenceImage) {
         finalPrompt = `${stylePrompt}. Reference style image is provided.`;
       }
+
+      const job = jobQueue.addImageStyleTransferJob({
+        baseImage: baseImage.dataUrl,
+        stylePrompt: stylePrompt.trim(),
+        ...(referenceImage && { referenceImage }),
+      });
+      jobId = job.id;
+      jobQueue.updateJob(job.id, { status: 'processing', progress: 10 });
 
       const requestBody = {
         baseImage: baseImage.dataUrl,
@@ -103,9 +114,30 @@ export default function StyleTransfer({
       const styledDataUrl = `data:image/png;base64,${data.data}`;
       setStyledImage(styledDataUrl);
       toast.success('스타일 전이 완료!');
+
+      if (jobId) {
+        jobQueue.updateJob(jobId, {
+          status: 'completed',
+          progress: 100,
+          result: {
+            imageData: data.data,
+            metadata: data.metadata,
+          },
+        });
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Style transfer failed:', error);
+      if (jobId) {
+        jobQueue.updateJob(jobId, {
+          status: 'failed',
+          progress: 0,
+          error:
+            error instanceof Error
+              ? error.message
+              : '스타일 전이에 실패했습니다',
+        });
+      }
       toast.error(
         error instanceof Error ? error.message : '스타일 전이에 실패했습니다'
       );
