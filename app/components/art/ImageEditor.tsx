@@ -7,6 +7,7 @@ import { getApiKey } from '@/lib/api-key/storage';
 import { toast } from '@/components/ui/Toast';
 import { saveImage } from '@/lib/storage/indexed-db';
 import type { StoredImage } from '@/lib/types/storage';
+import { jobQueue } from '@/lib/queue';
 
 interface ImageEditorProps {
   image: StoredImage;
@@ -90,12 +91,23 @@ export default function ImageEditor({
       return;
     }
 
+    let jobId: string | null = null;
+
     try {
       setIsEditing(true);
 
+      const job = jobQueue.addImageEditJob({
+        imageData: originalImageUrl,
+        prompt: editPrompt.trim(),
+        ...(maskData && { mask: maskData }),
+        originalImageId: image.id,
+      });
+      jobId = job.id;
+      jobQueue.updateJob(job.id, { status: 'processing', progress: 10 });
+
       const requestBody = {
         imageData: originalImageUrl,
-        prompt: editPrompt,
+        prompt: editPrompt.trim(),
         ...(maskData && { mask: maskData }),
       };
 
@@ -119,9 +131,30 @@ export default function ImageEditor({
       setEditedImage(editedImageBase64);
       setShowBeforeAfter(true);
       toast.success('이미지 편집 완료!');
+
+      if (jobId) {
+        jobQueue.updateJob(jobId, {
+          status: 'completed',
+          progress: 100,
+          result: {
+            imageData: editedImageBase64,
+            metadata: result.metadata,
+          },
+        });
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to edit image:', error);
+      if (jobId) {
+        jobQueue.updateJob(jobId, {
+          status: 'failed',
+          progress: 0,
+          error:
+            error instanceof Error
+              ? error.message
+              : '이미지 편집에 실패했습니다',
+        });
+      }
       toast.error(
         '이미지 편집 실패',
         error instanceof Error

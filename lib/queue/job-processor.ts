@@ -1,45 +1,44 @@
 /**
  * 백그라운드 작업 프로세서
- * 작업 큐를 폴링하고 API 요청을 처리하며 결과를 IndexedDB에 저장
+ * 큐에 등록된 작업을 순차적으로 처리하고 결과를 IndexedDB에 저장
  */
 
 import { jobQueue } from './job-queue';
-import type { Job, AudioJob, ImageJob } from './types';
+import type {
+  AudioGenerateJob,
+  ImageComposeJob,
+  ImageEditJob,
+  ImageGenerateJob,
+  ImageStyleTransferJob,
+  Job,
+} from './types';
 import { saveAudio, saveImage } from '@/lib/storage/indexed-db';
 import { generateAudioTags, generateImageTags } from '@/lib/utils/tags';
 import { getApiKey } from '@/lib/api-key/storage';
+import type { ArtStyle, QualityPreset } from '@/lib/art/types';
 
-const POLL_INTERVAL = 5000; // 5초마다 폴링
-const MAX_CONCURRENT_JOBS = 2; // 동시 처리 최대 작업 수
-const REQUEST_TIMEOUT = 300000; // 5분 타임아웃
+const POLL_INTERVAL = 5000; // 5초
+const MAX_CONCURRENT_JOBS = 2;
+const REQUEST_TIMEOUT = 300000; // 5분
 
-/**
- * 백그라운드 작업 프로세서 클래스
- */
+const COMPLETED_IMAGE_WIDTH = 1024;
+const COMPLETED_IMAGE_HEIGHT = 1024;
+
 export class JobProcessor {
   private isRunning = false;
   private pollTimer: NodeJS.Timeout | null = null;
-  private processingJobs: Set<string> = new Set();
+  private readonly processingJobs = new Set<string>();
 
-  /**
-   * 프로세서 시작
-   */
   start(): void {
     if (this.isRunning) return;
-
     this.isRunning = true;
     this.poll();
-
     // eslint-disable-next-line no-console
     console.log('[JobProcessor] Started');
   }
 
-  /**
-   * 프로세서 중지
-   */
   stop(): void {
     if (!this.isRunning) return;
-
     this.isRunning = false;
 
     if (this.pollTimer) {
@@ -51,87 +50,66 @@ export class JobProcessor {
     console.log('[JobProcessor] Stopped');
   }
 
-  /**
-   * 폴링
-   */
   private poll(): void {
     if (!this.isRunning) return;
 
-    this.processNextJobs();
+    void this.processNextJobs();
 
     this.pollTimer = setTimeout(() => {
       this.poll();
     }, POLL_INTERVAL);
   }
 
-  /**
-   * 다음 작업들 처리
-   */
   private async processNextJobs(): Promise<void> {
-    // 현재 처리 중인 작업 수 확인
-    const currentProcessing = this.processingJobs.size;
-    const availableSlots = MAX_CONCURRENT_JOBS - currentProcessing;
+    const slots = MAX_CONCURRENT_JOBS - this.processingJobs.size;
+    if (slots <= 0) return;
 
-    if (availableSlots <= 0) return;
-
-    // 대기 중인 작업 가져오기
-    const pendingJobs = jobQueue.getPendingJobs();
-
-    // 이미 처리 중인 작업 제외
-    const jobsToProcess = pendingJobs
+    const pendingJobs = jobQueue
+      .getPendingJobs()
       .filter((job) => !this.processingJobs.has(job.id))
-      .slice(0, availableSlots);
+      .slice(0, slots);
 
-    // 작업 처리
-    jobsToProcess.forEach((job) => {
-      this.processJob(job);
-    });
+    await Promise.all(pendingJobs.map((job) => this.processJob(job)));
   }
 
-  /**
-   * 작업 처리
-   */
   private async processJob(job: Job): Promise<void> {
-    // 처리 중 표시
     this.processingJobs.add(job.id);
 
     try {
-      // 작업 상태 업데이트
-      jobQueue.updateJob(job.id, {
-        status: 'processing',
-        startedAt: Date.now(),
-      });
+      jobQueue.updateJob(job.id, { status: 'processing', progress: 5 });
 
-      // eslint-disable-next-line no-console
-      console.log(`[JobProcessor] Processing job: ${job.id} (${job.type})`);
-
-      // 타입별 처리
-      if (job.type === 'audio') {
-        await this.processAudioJob(job as AudioJob);
-      } else if (job.type === 'image') {
-        await this.processImageJob(job as ImageJob);
+      switch (job.type) {
+        case 'audio-generate':
+          await this.processAudioGenerateJob(job as AudioGenerateJob);
+          break;
+        case 'image-generate':
+          await this.processImageGenerateJob(job as ImageGenerateJob);
+          break;
+        case 'image-edit':
+          await this.processImageEditJob(job as ImageEditJob);
+          break;
+        case 'image-compose':
+          await this.processImageComposeJob(job as ImageComposeJob);
+          break;
+        case 'image-style-transfer':
+          await this.processImageStyleTransferJob(job as ImageStyleTransferJob);
+          break;
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
       // eslint-disable-next-line no-console
       console.error(`[JobProcessor] Job failed: ${job.id}`, error);
-
-      // 실패 처리
       jobQueue.updateJob(job.id, {
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        completedAt: Date.now(),
+        progress: 0,
+        error: message,
       });
     } finally {
-      // 처리 중 표시 제거
       this.processingJobs.delete(job.id);
     }
   }
 
-  /**
-   * 오디오 작업 처리
-   */
-  private async processAudioJob(job: AudioJob): Promise<void> {
-    // API 요청
+  private async processAudioGenerateJob(job: AudioGenerateJob): Promise<void> {
     const response = await this.fetchWithTimeout('/api/audio/generate', {
       method: 'POST',
       headers: {
@@ -152,36 +130,28 @@ export class JobProcessor {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
       throw new Error(error.error || 'Audio generation failed');
     }
 
     const result = await response.json();
 
-    // 작업 결과 업데이트
     jobQueue.updateJob(job.id, {
       status: 'completed',
-      completedAt: Date.now(),
+      progress: 100,
       result: {
         audioBase64: result.audioBase64,
         metadata: result.metadata,
       },
     });
 
-    // IndexedDB에 저장
-    await this.saveAudioToIndexedDB(job, result);
+    await this.saveAudio(job, result);
 
     // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Audio job completed: ${job.id}`);
   }
 
-  /**
-   * 이미지 작업 처리
-   */
-  private async processImageJob(job: ImageJob): Promise<void> {
-    const batchSize = job.params.batchSize || 1;
-
-    // API 요청 (batchSize는 API에서 한 번에 처리)
+  private async processImageGenerateJob(job: ImageGenerateJob): Promise<void> {
     const response = await this.fetchWithTimeout('/api/art/generate', {
       method: 'POST',
       headers: {
@@ -193,49 +163,184 @@ export class JobProcessor {
         style: job.params.style,
         resolution: job.params.resolution,
         quality: job.params.quality,
-        batchSize: batchSize,
+        batchSize: job.params.batchSize ?? 1,
         seed: job.params.seed,
+        referenceImages: job.params.referenceImages,
       }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Image generation failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || 'Image generation failed');
     }
 
     const result = await response.json();
+    const images = Array.isArray(result.images) ? result.images : [];
 
-    // API 응답 형식: { images: [{ data: string, metadata: {...} }] }
-    const images = result.images.map(
-      (img: { data: string; metadata: Record<string, unknown> }) => ({
-        data: img.data,
-        metadata: img.metadata,
-      })
-    );
-
-    // 작업 결과 업데이트
     jobQueue.updateJob(job.id, {
       status: 'completed',
-      completedAt: Date.now(),
       progress: 100,
       result: { images },
     });
 
-    // IndexedDB에 저장
-    await this.saveImagesToIndexedDB(job, images);
+    await this.saveGeneratedImages(job, images);
 
     // eslint-disable-next-line no-console
-    console.log(`[JobProcessor] Image job completed: ${job.id}`);
+    console.log(`[JobProcessor] Image generate job completed: ${job.id}`);
   }
 
-  /**
-   * 오디오를 IndexedDB에 저장
-   */
-  private async saveAudioToIndexedDB(
-    job: AudioJob,
+  private async processImageEditJob(job: ImageEditJob): Promise<void> {
+    const response = await this.fetchWithTimeout('/api/art/edit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': getApiKey('gemini') || '',
+      },
+      body: JSON.stringify({
+        imageData: job.params.imageData,
+        prompt: job.params.prompt,
+        mask: job.params.mask,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Image edit failed');
+    }
+
+    const result = await response.json();
+    const imageData = result.data as string;
+    const metadata =
+      (result.metadata as Record<string, unknown>) ??
+      ({} as Record<string, unknown>);
+
+    const completedJob = jobQueue.updateJob(job.id, {
+      status: 'completed',
+      progress: 100,
+      result: {
+        imageData,
+        metadata,
+      },
+    });
+
+    if (completedJob) {
+      await this.saveDerivedImage({
+        jobId: job.id,
+        imageData,
+        metadata,
+        prompt: job.params.prompt,
+        tags: ['edited', 'image-edit'],
+      });
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(`[JobProcessor] Image edit job completed: ${job.id}`);
+  }
+
+  private async processImageComposeJob(job: ImageComposeJob): Promise<void> {
+    const response = await this.fetchWithTimeout('/api/art/compose', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': getApiKey('gemini') || '',
+      },
+      body: JSON.stringify({
+        images: job.params.images,
+        prompt: job.params.prompt,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Image composition failed');
+    }
+
+    const result = await response.json();
+    const imageData = result.data as string;
+    const metadata =
+      (result.metadata as Record<string, unknown>) ??
+      ({} as Record<string, unknown>);
+
+    const completedJob = jobQueue.updateJob(job.id, {
+      status: 'completed',
+      progress: 100,
+      result: {
+        imageData,
+        metadata,
+      },
+    });
+
+    if (completedJob) {
+      await this.saveDerivedImage({
+        jobId: job.id,
+        imageData,
+        metadata,
+        prompt: job.params.prompt,
+        tags: ['composed', 'image-compose'],
+      });
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(`[JobProcessor] Image compose job completed: ${job.id}`);
+  }
+
+  private async processImageStyleTransferJob(
+    job: ImageStyleTransferJob
+  ): Promise<void> {
+    const stylePrompt = job.params.referenceImage
+      ? `${job.params.stylePrompt}. Reference style image provided.`
+      : job.params.stylePrompt;
+
+    const response = await this.fetchWithTimeout('/api/art/style-transfer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': getApiKey('gemini') || '',
+      },
+      body: JSON.stringify({
+        baseImage: job.params.baseImage,
+        stylePrompt,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Style transfer failed');
+    }
+
+    const result = await response.json();
+    const imageData = result.data as string;
+    const metadata =
+      (result.metadata as Record<string, unknown>) ??
+      ({} as Record<string, unknown>);
+
+    const completedJob = jobQueue.updateJob(job.id, {
+      status: 'completed',
+      progress: 100,
+      result: {
+        imageData,
+        metadata,
+      },
+    });
+
+    if (completedJob) {
+      await this.saveDerivedImage({
+        jobId: job.id,
+        imageData,
+        metadata,
+        prompt: job.params.stylePrompt,
+        tags: ['style-transfer', 'image-style-transfer'],
+      });
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(`[JobProcessor] Style transfer job completed: ${job.id}`);
+  }
+
+  private async saveAudio(
+    job: AudioGenerateJob,
     result: { audioBase64: string; metadata: Record<string, unknown> }
   ): Promise<void> {
-    // 태그 생성
     const tags = generateAudioTags({
       type: job.params.audioType as 'bgm' | 'sfx',
       genre: job.params.genre as 'rpg' | 'fps' | 'puzzle' | 'racing' | 'retro',
@@ -243,10 +348,9 @@ export class JobProcessor {
       duration: job.params.duration,
     });
 
-    // 저장
     await saveAudio({
       id: `${job.id}-${Date.now()}`,
-      blobUrl: '', // 나중에 생성
+      blobUrl: '',
       data: result.audioBase64,
       metadata: {
         ...result.metadata,
@@ -259,46 +363,72 @@ export class JobProcessor {
     });
   }
 
-  /**
-   * 이미지를 IndexedDB에 저장
-   */
-  private async saveImagesToIndexedDB(
-    job: ImageJob,
+  private async saveGeneratedImages(
+    job: ImageGenerateJob,
     images: Array<{ data: string; metadata: Record<string, unknown> }>
   ): Promise<void> {
-    // 태그 생성
     const tags = generateImageTags({
-      style: job.params.style as
-        | 'pixel-art'
-        | 'concept-art'
-        | 'character-design'
-        | 'environment'
-        | 'ui-icons',
+      style: job.params.style as ArtStyle,
       resolution: job.params.resolution,
-      quality: job.params.quality as 'draft' | 'standard' | 'high' | undefined,
+      quality: job.params.quality as QualityPreset | undefined,
     });
 
-    // 각 이미지 저장
-    for (let i = 0; i < images.length; i++) {
-      const image = images[i];
-      await saveImage({
-        id: `${job.id}-${i}-${Date.now()}`,
-        blobUrl: '', // 나중에 생성
-        data: image.data,
-        metadata: {
-          ...image.metadata,
-          prompt: job.params.prompt,
-          style: job.params.style,
-          createdAt: new Date().toISOString(),
-        },
-        tags,
-      });
-    }
+    await Promise.all(
+      images.map((image, index) =>
+        saveImage({
+          id: `${job.id}-${index}-${Date.now()}`,
+          blobUrl: '',
+          data: image.data,
+          metadata: {
+            ...image.metadata,
+            prompt: job.params.prompt,
+            style: job.params.style,
+            resolution: job.params.resolution,
+            quality: job.params.quality,
+            createdAt: new Date().toISOString(),
+          },
+          tags,
+        })
+      )
+    );
   }
 
-  /**
-   * 타임아웃 지원 fetch
-   */
+  private async saveDerivedImage({
+    jobId,
+    imageData,
+    metadata,
+    prompt,
+    tags,
+  }: {
+    jobId: string;
+    imageData: string;
+    metadata: Record<string, unknown>;
+    prompt: string;
+    tags: string[];
+  }): Promise<void> {
+    const id =
+      (metadata?.id as string | undefined) ?? `derived-${jobId}-${Date.now()}`;
+    const baseMetadata = {
+      id,
+      prompt,
+      style: metadata?.style ?? 'custom',
+      width: metadata?.width ?? COMPLETED_IMAGE_WIDTH,
+      height: metadata?.height ?? COMPLETED_IMAGE_HEIGHT,
+      aspectRatio:
+        metadata?.aspectRatio ??
+        `${COMPLETED_IMAGE_WIDTH}x${COMPLETED_IMAGE_HEIGHT}`,
+      createdAt: metadata?.createdAt ?? new Date().toISOString(),
+    };
+
+    await saveImage({
+      id,
+      blobUrl: '',
+      data: imageData,
+      metadata: baseMetadata,
+      tags,
+    });
+  }
+
   private async fetchWithTimeout(
     url: string,
     options: RequestInit,
@@ -320,29 +450,14 @@ export class JobProcessor {
     }
   }
 
-  /**
-   * 작업 재시도
-   */
   async retryJob(jobId: string): Promise<boolean> {
     const job = jobQueue.getJob(jobId);
     if (!job) return false;
+    if (job.status !== 'failed' && job.status !== 'cancelled') return false;
 
-    // 실패한 작업만 재시도 가능
-    if (job.status !== 'failed') return false;
-
-    // 상태를 pending으로 변경
-    jobQueue.updateJob(jobId, {
-      status: 'pending',
-      error: undefined,
-      startedAt: undefined,
-      completedAt: undefined,
-    });
-
-    return true;
+    const updated = jobQueue.retryJob(jobId);
+    return Boolean(updated);
   }
 }
 
-/**
- * 싱글톤 인스턴스
- */
 export const jobProcessor = new JobProcessor();

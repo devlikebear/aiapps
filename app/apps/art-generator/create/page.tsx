@@ -63,14 +63,7 @@ interface StoredImage {
 }
 
 export default function ArtCreatePage() {
-  const {
-    error,
-    generatedImages,
-    setError,
-    removeImage,
-    addGeneratedImages,
-    startGeneration,
-  } = useArtStore();
+  const { error, generatedImages, setError, removeImage } = useArtStore();
 
   // Form state
   const [usageType, setUsageType] = useState<UsageType>('game');
@@ -238,74 +231,30 @@ export default function ArtCreatePage() {
           }
         : undefined;
 
-    // 레퍼런스 이미지가 있으면 localStorage 용량 문제로 즉시 생성
-    const hasReferenceImages = referenceImages !== undefined;
-
     try {
-      if (hasReferenceImages) {
-        // 즉시 생성 (큐 사용 안 함)
-        setError('');
-        startGeneration(); // 로딩 상태 시작
-        alert('🎨 레퍼런스 이미지를 사용하여 즉시 생성합니다...');
+      jobQueue.addImageGenerateJob({
+        prompt: prompt.trim(),
+        style,
+        resolution,
+        quality,
+        batchSize,
+        ...(seed && { seed: parseInt(seed, 10) }),
+        ...(referenceImages && { referenceImages }),
+      });
 
-        const response = await fetch('/api/art/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': apiKey,
-          },
-          body: JSON.stringify({
-            prompt: prompt.trim(),
-            style,
-            resolution,
-            quality,
-            batchSize,
-            ...(seed && { seed: parseInt(seed, 10) }),
-            referenceImages,
-          }),
-        });
+      // 폼 초기화
+      setPrompt('');
+      setSeed('');
+      setReferenceConfig({
+        images: [],
+        usages: ['style'],
+        influence: 70,
+      });
+      setError('');
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || '이미지 생성 실패');
-        }
-
-        const data = await response.json();
-
-        // 생성된 이미지를 스토어에 추가
-        if (data.images && Array.isArray(data.images)) {
-          addGeneratedImages(data);
-          alert(`✅ ${data.images.length}개 이미지 생성 완료!`);
-        }
-
-        // 폼 초기화
-        setPrompt('');
-        setSeed('');
-        setReferenceConfig({
-          images: [],
-          usages: ['style'],
-          influence: 70,
-        });
-      } else {
-        // 작업 큐에 추가 (레퍼런스 이미지 없을 때)
-        jobQueue.addImageJob({
-          prompt: prompt.trim(),
-          style,
-          resolution,
-          quality,
-          batchSize,
-          ...(seed && { seed: parseInt(seed, 10) }),
-        });
-
-        // 폼 초기화
-        setPrompt('');
-        setSeed('');
-        setError('');
-
-        alert(
-          '✅ 이미지 생성 작업이 큐에 추가되었습니다.\n완료되면 알림을 받게 됩니다.'
-        );
-      }
+      alert(
+        '✅ 이미지 생성 작업이 큐에 추가되었습니다.\n완료되면 알림을 받게 됩니다.'
+      );
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error

@@ -104,7 +104,7 @@ export default function AudioCreatePage() {
 
     // 작업 큐에 추가
     try {
-      jobQueue.addAudioJob({
+      jobQueue.addAudioGenerateJob({
         prompt: prompt.trim(),
         genre,
         audioType: type,

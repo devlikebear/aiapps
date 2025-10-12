@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./app/*", "./*"],
-      "@aiapps/ui": ["./packages/ui/src/index.ts"]
+      "@aiapps/ui": ["./packages/ui/src/index.ts"],
+      "prop-types": ["./types/prop-types/index"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

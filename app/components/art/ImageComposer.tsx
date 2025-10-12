@@ -6,6 +6,7 @@ import { X, Sparkles, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
 import { saveImage } from '@/lib/storage/indexed-db';
 import { getApiKey } from '@/lib/api-key/storage';
 import { toast } from '@/components/ui/Toast';
+import { jobQueue } from '@/lib/queue';
 
 interface ImageComposerProps {
   initialImages?: Array<{ id: string; dataUrl: string }>;
@@ -67,6 +68,8 @@ export default function ImageComposer({
       return;
     }
 
+    let jobId: string | null = null;
+
     try {
       setIsComposing(true);
 
@@ -75,9 +78,16 @@ export default function ImageComposer({
         throw new Error('API 키가 설정되지 않았습니다');
       }
 
+      const job = jobQueue.addImageComposeJob({
+        images: selectedImages.map((img) => img.dataUrl),
+        prompt: composePrompt.trim(),
+      });
+      jobId = job.id;
+      jobQueue.updateJob(job.id, { status: 'processing', progress: 10 });
+
       const requestBody = {
         images: selectedImages.map((img) => img.dataUrl),
-        prompt: composePrompt,
+        prompt: composePrompt.trim(),
       };
 
       const response = await fetch('/api/art/compose', {
@@ -98,9 +108,27 @@ export default function ImageComposer({
       const composedDataUrl = `data:image/png;base64,${data.data}`;
       setComposedImage(composedDataUrl);
       toast.success('이미지 합성 완료!');
+
+      if (jobId) {
+        jobQueue.updateJob(jobId, {
+          status: 'completed',
+          progress: 100,
+          result: {
+            imageData: data.data,
+            metadata: data.metadata,
+          },
+        });
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Image composition error:', err);
+      if (jobId && err instanceof Error) {
+        jobQueue.updateJob(jobId, {
+          status: 'failed',
+          progress: 0,
+          error: err.message,
+        });
+      }
       toast.error(
         err instanceof Error
           ? err.message
