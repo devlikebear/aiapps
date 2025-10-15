@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Download, Trash2, Eye, Wand2 } from 'lucide-react';
+import { Button } from '@aiapps/ui';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
@@ -367,38 +368,26 @@ export default function ArtCreatePage() {
                 프롬프트 <span className="text-red-400">*</span>
               </label>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={() => setPromptMode('manual')}
-                  className={`
-                    px-3 py-1 rounded text-xs transition-all
-                    ${
-                      promptMode === 'manual'
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                    }
-                  `}
+                  variant={promptMode === 'manual' ? 'primary' : 'secondary'}
+                  size="sm"
                 >
                   ✍️ 직접 입력
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => {
                     setPromptMode('builder');
                     handleBuildPromptFromPreset();
                   }}
-                  className={`
-                    px-3 py-1 rounded text-xs transition-all flex items-center gap-1
-                    ${
-                      promptMode === 'builder'
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                    }
-                  `}
+                  variant={promptMode === 'builder' ? 'primary' : 'secondary'}
+                  size="sm"
                 >
                   <Wand2 className="w-3 h-3" />
                   프리셋 빌더
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -461,13 +450,15 @@ export default function ArtCreatePage() {
                     : '프롬프트'}
                 </label>
                 {promptMode === 'builder' && (
-                  <button
+                  <Button
                     type="button"
                     onClick={handleBuildPromptFromPreset}
-                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
                   >
                     🔄 프롬프트 재생성
-                  </button>
+                  </Button>
                 )}
               </div>
               <textarea
@@ -586,13 +577,16 @@ export default function ArtCreatePage() {
           )}
 
           {/* Generate Button */}
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={!prompt.trim()}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl"
+            variant="primary"
+            size="lg"
+            fullWidth
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
             🎨 작업 큐에 추가하기
-          </button>
+          </Button>
         </div>
 
         {/* Generated Images */}
@@ -635,26 +629,31 @@ export default function ArtCreatePage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         onClick={() => handleDownload(image, 'png')}
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        variant="primary"
+                        size="sm"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700"
                       >
                         <Download className="w-4 h-4" />
                         PNG
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => handleDownload(image, 'jpg')}
-                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        variant="primary"
+                        size="sm"
+                        className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         <Download className="w-4 h-4" />
                         JPG
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => removeImage(image.id)}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors"
+                        variant="danger"
+                        size="sm"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -745,26 +744,30 @@ export default function ArtCreatePage() {
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
-                        <button
+                        <Button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDownloadRelated(image.data, image.id, 'png');
                           }}
-                          className="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                          variant="primary"
+                          size="sm"
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-xs"
                         >
                           <Download className="w-3 h-3" />
                           PNG
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDownloadRelated(image.data, image.id, 'jpg');
                           }}
-                          className="flex-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                          variant="primary"
+                          size="sm"
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-xs"
                         >
                           <Download className="w-3 h-3" />
                           JPG
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -788,12 +791,13 @@ export default function ArtCreatePage() {
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <h3 className="text-xl font-bold">이미지 상세</h3>
-                  <button
+                  <Button
                     onClick={() => setSelectedImage(null)}
-                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
+                    variant="secondary"
+                    size="sm"
                   >
                     닫기
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Image */}
@@ -881,7 +885,7 @@ export default function ArtCreatePage() {
 
                   {/* Download Buttons */}
                   <div className="flex gap-3 pt-2">
-                    <button
+                    <Button
                       onClick={() =>
                         handleDownloadRelated(
                           selectedImage.data,
@@ -889,12 +893,14 @@ export default function ArtCreatePage() {
                           'png'
                         )
                       }
-                      className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      variant="primary"
+                      size="md"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
                     >
                       <Download className="w-4 h-4" />
                       PNG 다운로드
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() =>
                         handleDownloadRelated(
                           selectedImage.data,
@@ -902,11 +908,13 @@ export default function ArtCreatePage() {
                           'jpg'
                         )
                       }
-                      className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      variant="primary"
+                      size="md"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
                     >
                       <Download className="w-4 h-4" />
                       JPG 다운로드
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
