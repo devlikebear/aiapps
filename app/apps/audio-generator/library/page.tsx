@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Play, Pause, Download, Trash2, Music } from 'lucide-react';
+import { Button } from '@aiapps/ui';
 import {
   getAllAudio,
   deleteAudio,
@@ -282,9 +283,11 @@ export default function AudioLibraryPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       onClick={() => handlePlay(audio)}
-                      className="p-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                      variant="primary"
+                      size="md"
+                      className="p-3 bg-indigo-600 hover:bg-indigo-700"
                       title={playingId === audio.id ? '일시정지' : '재생'}
                     >
                       {playingId === audio.id ? (
@@ -292,23 +295,27 @@ export default function AudioLibraryPage() {
                       ) : (
                         <Play className="w-5 h-5" />
                       )}
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                       onClick={() => handleDownload(audio)}
-                      className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      variant="secondary"
+                      size="md"
+                      className="p-3"
                       title="다운로드"
                     >
                       <Download className="w-5 h-5" />
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                       onClick={() => handleDelete(audio.id)}
-                      className="p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                      variant="danger"
+                      size="md"
+                      className="p-3"
                       title="삭제"
                     >
                       <Trash2 className="w-5 h-5" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

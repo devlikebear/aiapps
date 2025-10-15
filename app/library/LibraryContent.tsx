@@ -28,6 +28,7 @@ import {
   Loader2,
   Clock,
 } from 'lucide-react';
+import { Button } from '@aiapps/ui';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
 import { getAllImages, deleteImage } from '@/lib/storage/indexed-db';
 import ImageEditor from '@/components/art/ImageEditor';
@@ -622,38 +623,42 @@ export default function LibraryContent() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* Tabs */}
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => setActiveTab('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === 'all'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                variant={activeTab === 'all' ? 'primary' : 'secondary'}
+                size="md"
+                className={
+                  activeTab === 'all' ? 'bg-purple-600 hover:bg-purple-700' : ''
+                }
               >
                 전체 ({totalAudio + totalImages})
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setActiveTab('audio')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                variant={activeTab === 'audio' ? 'primary' : 'secondary'}
+                size="md"
+                className={
                   activeTab === 'audio'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                    ? 'bg-blue-600 hover:bg-blue-700 flex items-center gap-2'
+                    : 'flex items-center gap-2'
+                }
               >
                 <Music className="w-4 h-4" />
                 오디오 ({totalAudio})
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setActiveTab('image')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                variant={activeTab === 'image' ? 'primary' : 'secondary'}
+                size="md"
+                className={
                   activeTab === 'image'
-                    ? 'bg-pink-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                    ? 'bg-pink-600 hover:bg-pink-700 flex items-center gap-2'
+                    : 'flex items-center gap-2'
+                }
               >
                 <ImageIcon className="w-4 h-4" />
                 이미지 ({totalImages})
-              </button>
+              </Button>
             </div>
 
             {/* Search */}
@@ -684,12 +689,14 @@ export default function LibraryContent() {
                 )}
               </div>
               {selectedTags.length > 0 && (
-                <button
+                <Button
                   onClick={clearTagFilters}
-                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  variant="ghost"
+                  size="sm"
+                  className="text-purple-400 hover:text-purple-300"
                 >
                   모두 지우기
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
