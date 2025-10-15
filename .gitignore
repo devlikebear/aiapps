@@ -55,3 +55,6 @@ test-results/
 playwright-report/
 playwright/.cache/
 .playwright-mcp
+
+# Build artifacts (prevent recreation)
+/apps/
