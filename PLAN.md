@@ -6,6 +6,7 @@ Gemini AI를 활용한 멀티모달 생성 애플리케이션 모노레포:
 
 - **AI 게임 오디오 생성기**: Gemini Lyria RealTime 기반 실시간 음악/효과음 생성
 - **AI 2D 게임 아트 생성기**: Gemini 2.5 Flash Image 기반 2D 게임 아트 생성
+- **AI 트윗 생성기**: Gemini 2.5 Flash 기반 AI 트윗 자동 생성 (톤/길이 설정)
 
 **기술 스택**: Next.js 15 (App Router) | TypeScript | Tailwind CSS | Zustand | IndexedDB | Vercel
 
@@ -17,14 +18,17 @@ Gemini AI를 활용한 멀티모달 생성 애플리케이션 모노레포:
 
 - ✅ **Gemini Lyria API 연동 완료** - 오디오 생성 작동 중
 - ✅ **Gemini Image API 연동 완료** - 이미지 생성 작동 중
+- ✅ **Gemini Text API 연동 완료** - 트윗 생성 작동 중
 - ✅ **AI SDK 패키지** - Lyria/Image 클라이언트, 레이트 리밋, 재시도 로직
 - ✅ **IndexedDB v2** - 태그 시스템, 메타데이터 관리
 - ✅ **API 키 관리** - AES-256 암호화, 디바이스 지문 기반 보안
 - ✅ **오디오 생성기** - 프롬프트 빌더, 미리듣기, 라이브러리, 다운로드
 - ✅ **아트 생성기** - 프롬프트 빌더, 미리보기, 갤러리, 다운로드
+- ✅ **트윗 생성기** - 톤/길이 설정, 프리셋 저장, 라이브러리 관리
 - ✅ **배경 작업 큐** - localStorage 기반 FIFO 큐, Toast 알림
 - ✅ **태그 필터링** - 라이브러리/갤러리 필터, 관련 미디어 자동 표시
 - ✅ **공통 UI** - 레이아웃, 네비게이션, 로딩/에러 상태
+- ✅ **스케일러블 앱 메뉴** - 드롭다운 기반 앱 네비게이션
 
 ### 프로젝트 구조
 
@@ -33,10 +37,12 @@ aiapps/
 ├── app/                         # Next.js 15 App Router
 │   ├── apps/
 │   │   ├── audio-generator/    # 오디오 생성기 앱
-│   │   └── art-generator/      # 아트 생성기 앱
+│   │   ├── art-generator/      # 아트 생성기 앱
+│   │   └── tweet-generator/    # 트윗 생성기 앱
 │   ├── api/                    # API Routes
 │   │   ├── audio/              # 오디오 생성 API
 │   │   ├── art/                # 아트 생성 API
+│   │   ├── tweet/              # 트윗 생성 API
 │   │   └── settings/           # API 키 관리 API
 │   ├── components/             # React 컴포넌트
 │   └── lib/                    # 유틸리티, 스토어, DB

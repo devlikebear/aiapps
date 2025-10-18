@@ -135,6 +135,43 @@ export default function HelpPage() {
         },
       ],
     },
+    tweet: {
+      id: 'tweet',
+      title: '✨ 트윗 생성기',
+      icon: Library,
+      description: 'AI 기반 트윗 자동 생성 및 톤/길이 설정',
+      tips: [
+        '프롬프트는 구체적일수록 좋습니다. 예: "Game development update announcement"',
+        '톤 선택: Casual (친근함), Professional (격식), Humorous (재미), Inspirational (영감)',
+        '길이 선택: Short (140자), Medium (200자), Long (280자)',
+        '해시태그 옵션으로 트윗에 자동으로 관련 해시태그를 추가할 수 있습니다',
+        '이모지 옵션으로 트윗에 이모지를 포함할 수 있습니다',
+        '프리셋을 저장하여 자주 사용하는 설정을 재사용할 수 있습니다',
+        '생성된 트윗은 로컬 라이브러리에 자동 저장되며 언제든 다시 사용할 수 있습니다',
+      ],
+      faq: [
+        {
+          question: '트윗 생성이 실패하면?',
+          answer:
+            'API 키가 올바른지 확인하고, 프롬프트가 너무 길지 않은지 확인하세요. 길이 제한을 초과하면 재생성됩니다.',
+        },
+        {
+          question: '트윗 길이를 정확히 조정할 수 있나요?',
+          answer:
+            '선택한 길이(140/200/280자)를 목표로 생성되며, 정확한 길이는 AI 생성 특성상 약간 달라질 수 있습니다.',
+        },
+        {
+          question: '프리셋을 어떻게 사용하나요?',
+          answer:
+            '프리셋 관리 페이지에서 자주 사용하는 톤, 길이, 옵션 조합을 저장할 수 있습니다. 생성 페이지에서 프리셋을 선택하면 설정이 자동으로 적용됩니다.',
+        },
+        {
+          question: '생성된 트윗을 편집할 수 있나요?',
+          answer:
+            '라이브러리에서 생성된 트윗을 확인하고 수동으로 편집할 수 있습니다. 복사 버튼으로 트윗을 클립보드에 복사하여 사용할 수 있습니다.',
+        },
+      ],
+    },
   };
 
   const currentFeature = features[activeFeature];
@@ -163,7 +200,7 @@ export default function HelpPage() {
 
       {/* 기능 선택 탭 */}
       <div className="max-w-6xl mx-auto px-4 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {Object.entries(features).map(([key, feature]) => (
             <button
               key={key}
@@ -288,6 +325,20 @@ export default function HelpPage() {
                 </>
               )}
 
+              {activeFeature === 'tweet' && (
+                <>
+                  <p className="text-sm text-gray-400 mb-4">
+                    트윗을 생성해보세요
+                  </p>
+                  <Link
+                    href="/apps/tweet-generator/create"
+                    className="block w-full px-4 py-2 bg-gradient-to-r from-sky-500 to-purple-600 hover:from-sky-600 hover:to-purple-700 text-white rounded-lg font-medium text-center transition-colors"
+                  >
+                    트윗 생성 시작
+                  </Link>
+                </>
+              )}
+
               {activeFeature === 'library' && (
                 <>
                   <p className="text-sm text-gray-400 mb-4">
@@ -349,6 +400,25 @@ export default function HelpPage() {
                 </>
               )}
 
+              {activeFeature === 'tweet' && (
+                <>
+                  <div>
+                    <p className="text-gray-400 mb-1">지원 톤</p>
+                    <p className="text-white font-medium">
+                      Casual, Professional, Humorous, Inspirational
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 mb-1">길이 범위</p>
+                    <p className="text-white font-medium">140 ~ 280자</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 mb-1">생성 시간</p>
+                    <p className="text-white font-medium">5~10초</p>
+                  </div>
+                </>
+              )}
+
               {activeFeature === 'library' && (
                 <>
                   <div>
@@ -365,7 +435,7 @@ export default function HelpPage() {
                   </div>
                   <div>
                     <p className="text-gray-400 mb-1">지원 형식</p>
-                    <p className="text-white font-medium">WAV, PNG</p>
+                    <p className="text-white font-medium">WAV, PNG, Text</p>
                   </div>
                 </>
               )}

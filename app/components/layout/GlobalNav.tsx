@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Search,
-  Music,
-  ImageIcon,
   Library,
   Cloud,
   HelpCircle,
   Lightbulb,
+  ChevronDown,
 } from 'lucide-react';
 import { hasApiKey } from '@/lib/api-key/storage';
 import ApiKeySettings from '@/components/ApiKeySettings';
@@ -22,6 +21,13 @@ interface App {
   icon: string;
   path: string;
   description: string;
+  category: string;
+}
+
+interface AppCategory {
+  id: string;
+  name: string;
+  apps: App[];
 }
 
 const APPS: App[] = [
@@ -31,6 +37,7 @@ const APPS: App[] = [
     icon: '🎵',
     path: '/apps/audio-generator/create',
     description: 'AI 게임 음악 및 효과음 생성',
+    category: 'generators',
   },
   {
     id: 'art',
@@ -38,6 +45,7 @@ const APPS: App[] = [
     icon: '🎨',
     path: '/apps/art-generator/create',
     description: '2D 게임 아트 생성',
+    category: 'generators',
   },
   {
     id: 'tweet',
@@ -45,6 +53,15 @@ const APPS: App[] = [
     icon: '✨',
     path: '/apps/tweet-generator/create',
     description: 'AI 기반 트윗 자동 생성',
+    category: 'generators',
+  },
+];
+
+const APP_CATEGORIES: AppCategory[] = [
+  {
+    id: 'generators',
+    name: '생성기',
+    apps: APPS.filter((app) => app.category === 'generators'),
   },
 ];
 
@@ -54,6 +71,7 @@ function GlobalNav() {
   const [hasKey, setHasKey] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAppsDropdownOpen, setIsAppsDropdownOpen] = useState(false);
 
   useEffect(() => {
     setHasKey(hasApiKey('gemini'));
@@ -111,39 +129,68 @@ function GlobalNav() {
               role="group"
               aria-label="앱 네비게이션"
             >
-              {/* Audio Generator */}
-              <Link
-                href="/apps/audio-generator/create"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  isActive('/apps/audio-generator')
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                    : 'text-gray-300 hover:bg-gray-800'
-                }`}
-                aria-label="오디오 생성기로 이동"
-                aria-current={
-                  isActive('/apps/audio-generator') ? 'page' : undefined
-                }
-              >
-                <Music className="w-4 h-4" aria-hidden="true" />
-                <span className="text-sm font-medium">오디오</span>
-              </Link>
+              {/* Apps Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsAppsDropdownOpen(!isAppsDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-gray-300 hover:bg-gray-800"
+                  aria-label="AI 생성기 앱 메뉴"
+                  aria-expanded={isAppsDropdownOpen}
+                  aria-haspopup="menu"
+                >
+                  <span className="text-sm font-medium">✨ 앱</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${isAppsDropdownOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
 
-              {/* Art Generator */}
-              <Link
-                href="/apps/art-generator/create"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  isActive('/apps/art-generator')
-                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-                    : 'text-gray-300 hover:bg-gray-800'
-                }`}
-                aria-label="아트 생성기로 이동"
-                aria-current={
-                  isActive('/apps/art-generator') ? 'page' : undefined
-                }
-              >
-                <ImageIcon className="w-4 h-4" aria-hidden="true" />
-                <span className="text-sm font-medium">아트</span>
-              </Link>
+                {isAppsDropdownOpen && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsAppsDropdownOpen(false)}
+                    />
+
+                    {/* Dropdown Menu */}
+                    <div
+                      className="absolute top-full left-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50"
+                      role="menu"
+                      aria-label="AI 생성기"
+                    >
+                      {APP_CATEGORIES.map((category) => (
+                        <div key={category.id} role="group">
+                          <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider first:pt-3">
+                            {category.name}
+                          </div>
+                          {category.apps.map((app) => (
+                            <Link
+                              key={app.id}
+                              href={app.path}
+                              onClick={() => setIsAppsDropdownOpen(false)}
+                              className="flex items-start gap-3 px-4 py-3 hover:bg-gray-700 transition-colors"
+                              role="menuitem"
+                            >
+                              <div className="text-2xl flex-shrink-0">
+                                {app.icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-white">
+                                  {app.name}
+                                </div>
+                                <div className="text-xs text-gray-400 truncate">
+                                  {app.description}
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* Library */}
               <Link
@@ -349,29 +396,56 @@ function GlobalNav() {
 
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center gap-2 pb-3 overflow-x-auto">
-            <Link
-              href="/apps/audio-generator/create"
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${
-                isActive('/apps/audio-generator')
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300'
-              }`}
-            >
-              <Music className="w-4 h-4" />
-              오디오
-            </Link>
+            {/* Mobile Apps Dropdown */}
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setIsAppsDropdownOpen(!isAppsDropdownOpen)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap bg-gray-800 text-gray-300 hover:bg-gray-700"
+              >
+                ✨ 앱
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${isAppsDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-            <Link
-              href="/apps/art-generator/create"
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${
-                isActive('/apps/art-generator')
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800 text-gray-300'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4" />
-              아트
-            </Link>
+              {isAppsDropdownOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsAppsDropdownOpen(false)}
+                  />
+
+                  {/* Mobile Dropdown Menu */}
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50">
+                    {APP_CATEGORIES.map((category) => (
+                      <div key={category.id}>
+                        <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider first:pt-3">
+                          {category.name}
+                        </div>
+                        {category.apps.map((app) => (
+                          <Link
+                            key={app.id}
+                            href={app.path}
+                            onClick={() => setIsAppsDropdownOpen(false)}
+                            className="flex items-start gap-2 px-4 py-2 hover:bg-gray-700 transition-colors text-sm"
+                          >
+                            <div className="text-lg flex-shrink-0">
+                              {app.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-white">
+                                {app.name}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             <Link
               href="/library"

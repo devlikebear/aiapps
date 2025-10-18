@@ -39,6 +39,16 @@ const apps: AppInfo[] = [
     href: '/apps/art-generator',
   },
   {
+    id: 'tweet-generator',
+    name: 'AI Tweet Generator',
+    icon: '✨',
+    color: 'cyan',
+    category: 'Text',
+    description: 'AI 기반 트윗 자동 생성 및 톤 설정',
+    status: 'available',
+    href: '/apps/tweet-generator',
+  },
+  {
     id: 'video-generator',
     name: 'AI Video Generator',
     icon: '🎬',

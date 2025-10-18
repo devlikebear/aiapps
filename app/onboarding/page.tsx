@@ -164,7 +164,7 @@ export default function OnboardingPage() {
           description="이제 AI 컨텐츠 생성을 시작할 수 있습니다"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gray-800/50 rounded-lg p-4">
                 <p className="font-semibold text-white mb-2">
                   🎵 오디오 생성기
@@ -187,6 +187,19 @@ export default function OnboardingPage() {
                 </p>
                 <Link
                   href="/apps/art-generator/create"
+                  className="inline-flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm font-medium"
+                >
+                  시작하기 <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <p className="font-semibold text-white mb-2">✨ 트윗 생성기</p>
+                <p className="text-sm text-gray-400 mb-3">
+                  AI로 톤과 길이를 설정한 트윗을 자동 생성하세요
+                </p>
+                <Link
+                  href="/apps/tweet-generator/create"
                   className="inline-flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm font-medium"
                 >
                   시작하기 <ArrowRight className="w-4 h-4" />
