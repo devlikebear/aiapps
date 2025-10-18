@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Download, Trash2, Eye, Wand2 } from 'lucide-react';
-import { Button } from '@aiapps/ui';
+import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
@@ -329,29 +329,22 @@ export default function ArtCreatePage() {
 
           {/* Style Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              아트 스타일
-            </label>
-            <select
+            <Select
+              label="아트 스타일"
               value={style}
               onChange={(e) => setStyle(e.target.value as ArtStyle)}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              options={
+                availableArtStyles.length > 0
+                  ? availableArtStyles
+                  : [{ value: '', label: '테마를 먼저 선택하세요' }]
+              }
+              helperText={
+                availableArtStyles.find((s) => s.value === style)
+                  ?.description || '아트 스타일을 선택하세요'
+              }
               disabled={availableArtStyles.length === 0}
-            >
-              {availableArtStyles.length > 0 ? (
-                availableArtStyles.map((artStyle) => (
-                  <option key={artStyle.value} value={artStyle.value}>
-                    {artStyle.label}
-                  </option>
-                ))
-              ) : (
-                <option value="">테마를 먼저 선택하세요</option>
-              )}
-            </select>
-            <p className="mt-2 text-xs text-gray-500">
-              {availableArtStyles.find((s) => s.value === style)?.description ||
-                '아트 스타일을 선택하세요'}
-            </p>
+              fullWidth
+            />
           </div>
 
           {/* Reference Images */}
@@ -396,10 +389,8 @@ export default function ArtCreatePage() {
               <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700 space-y-4">
                 {/* Preset Selector */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    프리셋 선택
-                  </label>
-                  <select
+                  <Select
+                    label="프리셋 선택"
                     value={selectedPreset?.id || ''}
                     onChange={(e) => {
                       const preset = currentTheme?.presetBuilders.find(
@@ -407,26 +398,20 @@ export default function ArtCreatePage() {
                       );
                       setSelectedPreset(preset || null);
                     }}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    options={
+                      currentTheme && currentTheme.presetBuilders.length > 0
+                        ? currentTheme.presetBuilders.map((preset) => ({
+                            value: preset.id,
+                            label: `${preset.icon || '📦'} ${preset.name}`,
+                          }))
+                        : [{ value: '', label: '테마를 먼저 선택하세요' }]
+                    }
+                    helperText={selectedPreset?.description}
                     disabled={
                       !currentTheme || currentTheme.presetBuilders.length === 0
                     }
-                  >
-                    {currentTheme && currentTheme.presetBuilders.length > 0 ? (
-                      currentTheme.presetBuilders.map((preset, index) => (
-                        <option key={`${preset.id}-${index}`} value={preset.id}>
-                          {preset.icon || '📦'} {preset.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">테마를 먼저 선택하세요</option>
-                    )}
-                  </select>
-                  {selectedPreset?.description && (
-                    <p className="mt-2 text-xs text-gray-500">
-                      {selectedPreset.description}
-                    </p>
-                  )}
+                    fullWidth
+                  />
                 </div>
 
                 {/* Dynamic Preset Form */}
@@ -479,76 +464,56 @@ export default function ArtCreatePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Resolution */}
             <div>
-              <label className="block text-sm font-medium mb-2">해상도</label>
-              <select
+              <Select
+                label="해상도"
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {RESOLUTIONS.map((res) => (
-                  <option key={res.value} value={res.value}>
-                    {res.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs text-gray-500">
-                추천: {stylePreset.recommendedResolution}
-              </p>
+                options={RESOLUTIONS}
+                helperText={`추천: ${stylePreset.recommendedResolution}`}
+                fullWidth
+              />
             </div>
 
             {/* Quality */}
             <div>
-              <label className="block text-sm font-medium mb-2">품질</label>
-              <select
+              <Select
+                label="품질"
                 value={quality}
                 onChange={(e) => setQuality(e.target.value as QualityPreset)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {QUALITY_PRESETS.map((q) => (
-                  <option key={q.value} value={q.value}>
-                    {q.label} - {q.description}
-                  </option>
-                ))}
-              </select>
+                options={QUALITY_PRESETS.map((q) => ({
+                  value: q.value,
+                  label: `${q.label} - ${q.description}`,
+                }))}
+                fullWidth
+              />
             </div>
           </div>
 
           {/* Batch Size & Seed */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Batch Size */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                생성 개수: {batchSize}개
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={4}
-                value={batchSize}
-                onChange={(e) => setBatchSize(Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>1개</span>
-                <span>4개</span>
-              </div>
-            </div>
+            <RangeSlider
+              label="생성 개수"
+              min={1}
+              max={4}
+              step={1}
+              value={batchSize}
+              onChange={(e) => setBatchSize(Number(e.target.value))}
+              helperText="한 번에 생성할 이미지 개수 (1~4개)"
+              fullWidth
+            />
 
             {/* Seed */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                시드 (선택사항)
-              </label>
-              <input
+              <Input
                 type="number"
+                label="시드 (선택사항)"
                 value={seed}
                 onChange={(e) => setSeed(e.target.value)}
                 placeholder="랜덤"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                helperText="동일한 시드로 재현 가능한 이미지 생성"
+                fullWidth
               />
-              <p className="mt-1 text-xs text-gray-500">
-                동일한 시드로 재현 가능한 이미지 생성
-              </p>
             </div>
           </div>
 

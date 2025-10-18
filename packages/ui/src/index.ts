@@ -8,6 +8,9 @@ export type { InputProps } from './components/Input';
 export { Select } from './components/Select';
 export type { SelectProps } from './components/Select';
 
+export { RangeSlider } from './components/RangeSlider';
+export type { RangeSliderProps } from './components/RangeSlider';
+
 // Layout
 export { Card } from './components/Card';
 export type { CardProps } from './components/Card';
