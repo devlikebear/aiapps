@@ -388,16 +388,94 @@ export class JobProcessor {
     });
 
     if (completedJob) {
+      // IndexedDB에 저장
       await saveTweet({
         id: job.id,
         tweet,
         metadata: tweetMetadata,
         createdAt: new Date().toISOString(),
       });
+
+      // Google Drive에 자동 저장
+      try {
+        await this.saveTweetToGoogleDrive(job.id, tweet, tweetMetadata);
+      } catch (error) {
+        // Google Drive 저장 실패해도 작업은 완료 (IndexedDB는 저장됨)
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[JobProcessor] Failed to save tweet to Google Drive: ${job.id}`,
+          error
+        );
+      }
     }
 
     // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Tweet generation job completed: ${job.id}`);
+  }
+
+  private async saveTweetToGoogleDrive(
+    tweetId: string,
+    tweetContent: string,
+    metadata: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      const { useGoogleDriveStore } = await import(
+        '@/lib/stores/google-drive-store'
+      );
+      const { uploadFileToGoogleDrive, optimizeMetadataForGoogleDrive } =
+        await import('@/lib/google-drive/client');
+
+      const store = useGoogleDriveStore.getState();
+
+      // 인증 확인
+      if (
+        !store.isAuthenticated ||
+        !store.accessToken ||
+        !store.tweetsFolderId
+      ) {
+        // eslint-disable-next-line no-console
+        console.log(
+          '[JobProcessor] Google Drive not authenticated or tweets folder not found, skipping upload'
+        );
+        return;
+      }
+
+      // 트윗을 텍스트 파일로 저장
+      const tweetBlob = new Blob([tweetContent], { type: 'text/plain' });
+      const filename = `tweet-${tweetId}.txt`;
+
+      // 메타데이터 최적화
+      const optimizedMetadata = optimizeMetadataForGoogleDrive({
+        tweetId,
+        tone: String(metadata.tone || ''),
+        length: String(metadata.length || ''),
+        prompt: String(metadata.prompt || '').substring(0, 50),
+        createdAt: String(metadata.createdAt || ''),
+      });
+
+      const uploadedFile = await uploadFileToGoogleDrive(
+        store.accessToken,
+        tweetBlob,
+        filename,
+        store.tweetsFolderId,
+        optimizedMetadata
+      );
+
+      // Store에 추가
+      store.addTweetFile(uploadedFile);
+
+      // eslint-disable-next-line no-console
+      console.log(
+        `[JobProcessor] Tweet saved to Google Drive: ${uploadedFile.id}`
+      );
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(
+        '[JobProcessor] Error saving tweet to Google Drive:',
+        error
+      );
+      throw error;
+    }
   }
 
   private async saveAudio(

@@ -58,8 +58,19 @@ export function useGoogleDriveLogin() {
           rootFolderId
         );
 
+        const tweetsFolderId = await ensureGoogleDriveFolder(
+          accessToken,
+          GOOGLE_DRIVE_FOLDERS.TWEETS,
+          rootFolderId
+        );
+
         // 폴더 ID 저장
-        setFolderIds(rootFolderId, audioFolderId, imagesFolderId);
+        setFolderIds(
+          rootFolderId,
+          audioFolderId,
+          imagesFolderId,
+          tweetsFolderId
+        );
 
         // 사용자 인증 상태 업데이트
         setAuthenticated(true, accessToken);

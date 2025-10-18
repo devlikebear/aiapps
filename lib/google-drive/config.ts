@@ -25,6 +25,7 @@ export const GOOGLE_DRIVE_FOLDERS = {
   ROOT: 'aiapps-media', // 루트 폴더명
   AUDIO: 'audio', // 오디오 폴더
   IMAGES: 'images', // 이미지 폴더
+  TWEETS: 'tweets', // 트윗 폴더
 } as const;
 
 /**

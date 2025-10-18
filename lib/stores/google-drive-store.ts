@@ -18,12 +18,15 @@ export interface GoogleDriveState {
   rootFolderId: string | null;
   audioFolderId: string | null;
   imagesFolderId: string | null;
+  tweetsFolderId: string | null;
 
   // 파일 목록
   audioFiles: GoogleDriveFile[];
   imageFiles: GoogleDriveFile[];
+  tweetFiles: GoogleDriveFile[];
   totalAudioFiles: number;
   totalImageFiles: number;
+  totalTweetFiles: number;
 
   // 액션
   setAuthenticated: (
@@ -35,13 +38,21 @@ export interface GoogleDriveState {
   setUserEmail: (email: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  setFolderIds: (root: string, audio: string, images: string) => void;
+  setFolderIds: (
+    root: string,
+    audio: string,
+    images: string,
+    tweets?: string
+  ) => void;
   setAudioFiles: (files: GoogleDriveFile[], total: number) => void;
   setImageFiles: (files: GoogleDriveFile[], total: number) => void;
+  setTweetFiles: (files: GoogleDriveFile[], total: number) => void;
   addAudioFile: (file: GoogleDriveFile) => void;
   addImageFile: (file: GoogleDriveFile) => void;
+  addTweetFile: (file: GoogleDriveFile) => void;
   removeAudioFile: (fileId: string) => void;
   removeImageFile: (fileId: string) => void;
+  removeTweetFile: (fileId: string) => void;
   reset: () => void;
 }
 
@@ -55,10 +66,13 @@ export const useGoogleDriveStore = create<GoogleDriveState>((set) => ({
   rootFolderId: null,
   audioFolderId: null,
   imagesFolderId: null,
+  tweetsFolderId: null,
   audioFiles: [],
   imageFiles: [],
+  tweetFiles: [],
   totalAudioFiles: 0,
   totalImageFiles: 0,
+  totalTweetFiles: 0,
 
   // 액션
   setAuthenticated: (authenticated, token, email) =>
@@ -88,11 +102,12 @@ export const useGoogleDriveStore = create<GoogleDriveState>((set) => ({
       error,
     }),
 
-  setFolderIds: (root, audio, images) =>
+  setFolderIds: (root, audio, images, tweets) =>
     set({
       rootFolderId: root,
       audioFolderId: audio,
       imagesFolderId: images,
+      tweetsFolderId: tweets || null,
     }),
 
   setAudioFiles: (files, total) =>
@@ -107,6 +122,12 @@ export const useGoogleDriveStore = create<GoogleDriveState>((set) => ({
       totalImageFiles: total,
     }),
 
+  setTweetFiles: (files, total) =>
+    set({
+      tweetFiles: files,
+      totalTweetFiles: total,
+    }),
+
   addAudioFile: (file) =>
     set((state) => ({
       audioFiles: [file, ...state.audioFiles],
@@ -117,6 +138,12 @@ export const useGoogleDriveStore = create<GoogleDriveState>((set) => ({
     set((state) => ({
       imageFiles: [file, ...state.imageFiles],
       totalImageFiles: state.totalImageFiles + 1,
+    })),
+
+  addTweetFile: (file) =>
+    set((state) => ({
+      tweetFiles: [file, ...state.tweetFiles],
+      totalTweetFiles: state.totalTweetFiles + 1,
     })),
 
   removeAudioFile: (fileId) =>
@@ -131,6 +158,12 @@ export const useGoogleDriveStore = create<GoogleDriveState>((set) => ({
       totalImageFiles: Math.max(0, state.totalImageFiles - 1),
     })),
 
+  removeTweetFile: (fileId) =>
+    set((state) => ({
+      tweetFiles: state.tweetFiles.filter((f) => f.id !== fileId),
+      totalTweetFiles: Math.max(0, state.totalTweetFiles - 1),
+    })),
+
   reset: () =>
     set({
       isAuthenticated: false,
@@ -141,9 +174,12 @@ export const useGoogleDriveStore = create<GoogleDriveState>((set) => ({
       rootFolderId: null,
       audioFolderId: null,
       imagesFolderId: null,
+      tweetsFolderId: null,
       audioFiles: [],
       imageFiles: [],
+      tweetFiles: [],
       totalAudioFiles: 0,
       totalImageFiles: 0,
+      totalTweetFiles: 0,
     }),
 }));

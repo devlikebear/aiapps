@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Music,
   Image as ImageIcon,
+  Sparkles,
   Search,
   Filter,
   RotateCcw,
@@ -20,21 +21,27 @@ import { GoogleDriveLogin } from '@/components/cloud/GoogleDriveLoginButton';
 import type { GoogleDriveFile } from '@/lib/google-drive/client';
 
 interface EnhancedFile extends GoogleDriveFile {
-  type: 'audio' | 'image';
+  type: 'audio' | 'image' | 'tweet';
   properties?: Record<string, string>;
 }
 
 type SortKey = 'name' | 'createdTime' | 'size';
 type SortOrder = 'asc' | 'desc';
-type FilterType = 'all' | 'audio' | 'image';
+type FilterType = 'all' | 'audio' | 'image' | 'tweet';
 
 /**
  * Cloud Library 페이지
- * Google Drive에 저장된 모든 미디어 (오디오 + 이미지) 통합 보기
+ * Google Drive에 저장된 모든 미디어 (오디오 + 이미지 + 트윗) 통합 보기
  */
 export default function CloudLibraryPage() {
-  const { isAuthenticated, audioFiles, imageFiles, isLoading, error } =
-    useGoogleDriveStore();
+  const {
+    isAuthenticated,
+    audioFiles,
+    imageFiles,
+    tweetFiles,
+    isLoading,
+    error,
+  } = useGoogleDriveStore();
   const { loadAudioFiles, loadImageFiles } = useGoogleDriveList();
   const deleteFile = useGoogleDriveDelete();
 
@@ -57,6 +64,7 @@ export default function CloudLibraryPage() {
   const allFiles: EnhancedFile[] = [
     ...audioFiles.map((f) => ({ ...f, type: 'audio' as const })),
     ...imageFiles.map((f) => ({ ...f, type: 'image' as const })),
+    ...tweetFiles.map((f) => ({ ...f, type: 'tweet' as const })),
   ];
 
   // 필터링
@@ -118,7 +126,9 @@ export default function CloudLibraryPage() {
     setIsDeleting(fileId);
     const file = allFiles.find((f) => f.id === fileId);
     if (file) {
-      const success = await deleteFile(fileId, file.type);
+      // tweet 타입은 'audio'로 처리 (향후 지원 예정)
+      const typeForDelete = file.type === 'tweet' ? 'audio' : file.type;
+      const success = await deleteFile(fileId, typeForDelete);
       if (!success) {
         // 에러는 스토어에서 처리됨
       }
@@ -250,6 +260,7 @@ export default function CloudLibraryPage() {
   // Statistics
   const audioCount = audioFiles.length;
   const imageCount = imageFiles.length;
+  const tweetCount = tweetFiles.length;
   const totalSize = allFiles.reduce((acc, f) => acc + Number(f.size), 0);
 
   return (
@@ -269,7 +280,7 @@ export default function CloudLibraryPage() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <Music size={24} className="text-cyan-400" />
@@ -286,6 +297,16 @@ export default function CloudLibraryPage() {
               <div>
                 <p className="text-gray-400 text-sm">이미지</p>
                 <p className="text-2xl font-bold text-gray-100">{imageCount}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <Sparkles size={24} className="text-cyan-400" />
+              <div>
+                <p className="text-gray-400 text-sm">트윗</p>
+                <p className="text-2xl font-bold text-gray-100">{tweetCount}</p>
               </div>
             </div>
           </div>
@@ -322,8 +343,8 @@ export default function CloudLibraryPage() {
             {/* Filter Type */}
             <div className="flex items-center gap-2">
               <Filter size={18} className="text-gray-500" />
-              <div className="flex gap-2">
-                {(['all', 'audio', 'image'] as const).map((type) => (
+              <div className="flex gap-2 flex-wrap">
+                {(['all', 'audio', 'image', 'tweet'] as const).map((type) => (
                   <button
                     key={type}
                     onClick={() => setFilterType(type)}
@@ -337,7 +358,9 @@ export default function CloudLibraryPage() {
                       ? '전체'
                       : type === 'audio'
                         ? '🎵 오디오'
-                        : '🖼️ 이미지'}
+                        : type === 'image'
+                          ? '🖼️ 이미지'
+                          : '✨ 트윗'}
                   </button>
                 ))}
               </div>
@@ -418,9 +441,13 @@ export default function CloudLibraryPage() {
                           <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
                             <Music size={20} className="text-cyan-400" />
                           </div>
-                        ) : (
+                        ) : file.type === 'image' ? (
                           <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                             <ImageIcon size={20} className="text-purple-400" />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                            <Sparkles size={20} className="text-cyan-400" />
                           </div>
                         )}
                       </div>
