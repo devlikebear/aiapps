@@ -29,63 +29,95 @@ export default function OnboardingPage() {
         {/* Step 1 */}
         <StepCard
           step={1}
-          title="Google Cloud Console 접속"
-          description="Google Cloud 콘솔에서 Gemini API를 활성화합니다"
+          title="🎯 Google AI Studio에서 API 키 발급"
+          description="가장 간단한 방법으로 API 키를 발급받습니다"
         >
           <ol className="space-y-3 text-gray-300">
             <li className="flex gap-3">
               <span className="flex-shrink-0 text-sky-400 font-bold">1.</span>
               <span>
-                아래 링크에서 Google Cloud Console 접속
+                아래 링크에서 Google AI Studio 접속
                 <br />
                 <Link
-                  href="https://console.cloud.google.com/apis/dashboard"
+                  href="https://aistudio.google.com/api-keys"
                   target="_blank"
-                  className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1 mt-1"
+                  className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1 mt-1 font-semibold"
                 >
-                  console.cloud.google.com/apis/dashboard
+                  🚀 aistudio.google.com/api-keys
                   <ExternalLink className="w-4 h-4" />
                 </Link>
               </span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 text-sky-400 font-bold">2.</span>
-              <span>Google 계정으로 로그인</span>
+              <span>Google 계정으로 로그인 (없으면 회원가입)</span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 text-sky-400 font-bold">3.</span>
-              <span>새 프로젝트를 생성하거나 기존 프로젝트 선택</span>
+              <span>
+                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300">
+                  + Create API Key
+                </code>
+                버튼 클릭
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 text-sky-400 font-bold">4.</span>
+              <span>생성된 API 키를 복사합니다</span>
             </li>
           </ol>
+
+          <div className="mt-4 p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+            <p className="text-sm text-sky-300">
+              💡 <strong>팁:</strong> Google AI Studio는 가장 간단한 방법입니다.
+              프로젝트 관리가 필요하면 Google Cloud Console을 사용하세요.
+            </p>
+          </div>
         </StepCard>
 
         {/* Step 2 */}
         <StepCard
           step={2}
-          title="Gemini API 활성화"
-          description="프로젝트에서 필요한 API들을 활성화합니다"
+          title="(선택) Google Cloud Console에서 고급 설정"
+          description="프로젝트 관리, 할당량 설정이 필요한 경우"
         >
           <ol className="space-y-3 text-gray-300">
             <li className="flex gap-3">
               <span className="flex-shrink-0 text-sky-400 font-bold">1.</span>
               <span>
-                상단 검색창에
-                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300 mx-1">
-                  Gemini
-                </code>
-                검색
+                <Link
+                  href="https://console.cloud.google.com/apis/dashboard"
+                  target="_blank"
+                  className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
+                >
+                  Google Cloud Console
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+                에 접속
               </span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 text-sky-400 font-bold">2.</span>
-              <span>검색 결과에서 각 API 활성화:</span>
-            </li>
-            <li className="ml-8 space-y-2">
-              <div>✓ Generative Language API (오디오/이미지 생성)</div>
+              <span>프로젝트 생성 또는 선택</span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 text-sky-400 font-bold">3.</span>
-              <span>각 API마다 &quot;활성화&quot; 버튼 클릭</span>
+              <span>
+                상단 검색창에
+                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300 mx-1">
+                  Generative Language API
+                </code>
+                검색 후 활성화
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 text-sky-400 font-bold">4.</span>
+              <span>
+                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300">
+                  사용자 인증 정보
+                </code>
+                에서 API 키 생성
+              </span>
             </li>
           </ol>
         </StepCard>
@@ -93,49 +125,6 @@ export default function OnboardingPage() {
         {/* Step 3 */}
         <StepCard
           step={3}
-          title="API 키 생성"
-          description="애플리케이션에서 사용할 API 키를 생성합니다"
-        >
-          <ol className="space-y-3 text-gray-300">
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 text-sky-400 font-bold">1.</span>
-              <span>
-                좌측 사이드바에서
-                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300 mx-1">
-                  사용자 인증 정보
-                </code>
-                클릭
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 text-sky-400 font-bold">2.</span>
-              <span>
-                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300">
-                  + 사용자 인증 정보 만들기
-                </code>
-                클릭
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 text-sky-400 font-bold">3.</span>
-              <span>
-                드롭다운에서
-                <code className="bg-gray-800 px-2 py-1 rounded text-sky-300 mx-1">
-                  API 키
-                </code>
-                선택
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 text-sky-400 font-bold">4.</span>
-              <span>새로운 API 키가 생성됩니다 (자동 복사됨)</span>
-            </li>
-          </ol>
-        </StepCard>
-
-        {/* Step 4 */}
-        <StepCard
-          step={4}
           title="API 키 앱에 저장"
           description="생성한 API 키를 AI Apps에 저장합니다"
         >
@@ -168,9 +157,9 @@ export default function OnboardingPage() {
           </div>
         </StepCard>
 
-        {/* Step 5 */}
+        {/* Step 4 */}
         <StepCard
-          step={5}
+          step={4}
           title="앱 사용 시작"
           description="이제 AI 컨텐츠 생성을 시작할 수 있습니다"
         >
