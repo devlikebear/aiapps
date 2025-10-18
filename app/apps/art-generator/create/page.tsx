@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Download, Trash2, Eye, Wand2 } from 'lucide-react';
-import { Button, Select } from '@aiapps/ui';
+import { Button, Select, Input } from '@aiapps/ui';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
@@ -512,19 +512,15 @@ export default function ArtCreatePage() {
 
             {/* Seed */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                시드 (선택사항)
-              </label>
-              <input
+              <Input
                 type="number"
+                label="시드 (선택사항)"
                 value={seed}
                 onChange={(e) => setSeed(e.target.value)}
                 placeholder="랜덤"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                helperText="동일한 시드로 재현 가능한 이미지 생성"
+                fullWidth
               />
-              <p className="mt-1 text-xs text-gray-500">
-                동일한 시드로 재현 가능한 이미지 생성
-              </p>
             </div>
           </div>
 

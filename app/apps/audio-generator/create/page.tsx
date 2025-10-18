@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button, Select } from '@aiapps/ui';
+import { Button, Select, Input } from '@aiapps/ui';
 import { useAudioStore } from '@/lib/stores/audio-store';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType } from '@/lib/audio/types';
@@ -293,21 +293,16 @@ export default function AudioCreatePage() {
 
             {/* BPM */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                BPM (기본: {preset.bpm.default})
-              </label>
-              <input
+              <Input
                 type="number"
+                label={`BPM (기본: ${preset.bpm.default})`}
                 min={preset.bpm.min}
                 max={preset.bpm.max}
                 value={customBpm || preset.bpm.default}
                 onChange={(e) => setCustomBpm(Number(e.target.value))}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                helperText={`Min: ${preset.bpm.min}, Max: ${preset.bpm.max}`}
+                fullWidth
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Min: {preset.bpm.min}</span>
-                <span>Max: {preset.bpm.max}</span>
-              </div>
             </div>
           </div>
 
