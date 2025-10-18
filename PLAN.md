@@ -207,12 +207,38 @@ aiapps/
 | Phase 3 | 아트 생성기 | 5-7일 | ✅ 완료 |
 | Phase 3.6 | 태그 필터링 & 배경 큐 | 2일 | ✅ 완료 |
 | Phase 4 | UI 개선 (Code Quality) | 1일 | ✅ 완료 |
+| Phase 4.5 | 프로젝트 구조 리팩토링 | 1일 | ✅ 완료 |
 | Phase 5 | 보안 & 관찰성 | 3일 | ✅ 완료 |
 | Phase 6 | 배포 준비 | 1일 | ✅ 완료 |
 | **Phase 7** | **테스트 & 버그 수정** | **3-5일** | **🔄 다음** |
 | Phase 8 | 런치 & 모니터링 | 2-3일 | ⏳ 대기 |
 
 **총 예상 기간**: 약 4-6주 (Phase 0-6 완료, Phase 7-8 남음)
+
+## Phase 4.5 완료 사항 ✅
+
+**프로젝트 구조 리팩토링 완료** (#81)
+
+### 완료된 작업
+1. ✅ **파일 정리**
+   - `/app/components/art 2/` 빈 디렉토리 삭제
+   - `/stores/job-queue-store.ts` → `/lib/stores/job-queue-store.ts`로 이동
+   - `/types/prop-types/` 삭제 및 @types/prop-types 설치
+
+2. ✅ **Import 경로 수정**
+   - 3개 파일의 job-queue-store import 경로 업데이트
+   - tsconfig.json에서 미사용 prop-types 경로 제거
+
+3. ✅ **문서 동기화**
+   - CLAUDE.md 업데이트: 실제 프로젝트 구조 반영
+   - API 스펙 명확화: 미구현 엔드포인트 표시
+   - 컴포넌트 구조 다이어그램 정확화
+
+### 주요 개선 사항
+- 모든 stores를 `lib/stores/` 아래로 통일 ✓
+- Path aliases 명확화 (타입 정의 오류 해결) ✓
+- 프로젝트 구조 문서와 실제 코드 동기화 ✓
+- 개발 생산성 향상 (IDE 자동 완성 정확도 개선) ✓
 
 ---
 
