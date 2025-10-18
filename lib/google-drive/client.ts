@@ -23,6 +23,34 @@ export interface GoogleDriveFile {
 }
 
 /**
+ * 메타데이터를 Google Drive 속성 제한에 맞게 최적화
+ * Google Drive properties: 각 key-value 합쳐서 124 bytes UTF-8 제한
+ */
+export function optimizeMetadataForGoogleDrive(
+  metadata: Record<string, unknown>
+): Record<string, string> {
+  const optimized: Record<string, string> = {};
+  const MAX_PROPERTY_SIZE = 120; // 안전마진을 포함한 제한
+
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value === null || value === undefined) continue;
+
+    let stringValue = String(value);
+
+    // 값 길이 제한: key + value 합쳐서 MAX_PROPERTY_SIZE 이내
+    const availableSize = MAX_PROPERTY_SIZE - key.length;
+    if (stringValue.length > availableSize) {
+      stringValue =
+        stringValue.substring(0, Math.max(1, availableSize - 3)) + '...';
+    }
+
+    optimized[key] = stringValue;
+  }
+
+  return optimized;
+}
+
+/**
  * Google Drive 폴더 생성/조회
  */
 export async function ensureGoogleDriveFolder(
@@ -119,9 +147,9 @@ export async function uploadFileToGoogleDrive(
       parents: [parentFolderId],
     };
 
-    // 커스텀 속성 추가
+    // 커스텀 속성 추가 (Google Drive 제한에 맞게 최적화)
     if (metadata) {
-      fileMetadata.properties = metadata;
+      fileMetadata.properties = optimizeMetadataForGoogleDrive(metadata);
     }
 
     form.append(
