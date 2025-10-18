@@ -409,13 +409,12 @@ export default function LibraryContent() {
           .replace(/:/g, '-');
         const filename = `audio-${timestamp}.wav`;
 
+        // 메타데이터 생성 (간단하게 유지하여 Google Drive 크기 제한 회피)
         const audioMeta = audio.metadata as Record<string, unknown>;
         const metadata: Record<string, string> = {
-          prompt: audio.metadata.prompt || '',
-          type: audio.metadata.type || '',
-          genre: (audioMeta.genre as string) || '',
-          bpm: String(audioMeta.bpm || ''),
-          duration: String(audio.metadata.duration || ''),
+          t: audio.metadata.type || '', // type 축약
+          g: (audioMeta.genre as string) || '', // genre 축약
+          b: String(audioMeta.bpm || ''), // bpm 축약
         };
 
         const result = await uploadFile(blob, filename, 'audio', metadata);
@@ -478,10 +477,10 @@ export default function LibraryContent() {
           .replace(/:/g, '-');
         const filename = `art-${timestamp}.png`;
 
+        // 메타데이터 생성 (간단하게 유지하여 Google Drive 크기 제한 회피)
         const imageMeta = image.metadata as Record<string, unknown>;
         const metadata: Record<string, string> = {
-          prompt: image.metadata.prompt || '',
-          technique: (imageMeta.technique as string) || '',
+          t: (imageMeta.technique as string) || '', // technique 축약
         };
 
         const result = await uploadFile(blob, filename, 'image', metadata);
