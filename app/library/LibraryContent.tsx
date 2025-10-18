@@ -681,13 +681,15 @@ export default function LibraryContent() {
       // 트윗을 텍스트 파일로 생성
       const tweetBlob = new Blob([tweet.tweet], { type: 'text/plain' });
 
-      // 메타데이터 생성
+      // 메타데이터 생성 (Google Drive 124바이트 제한에 맞춤)
+      const prompt = (tweet.metadata.prompt as string) || '';
       const metadata: Record<string, string> = {
         tone: tweet.metadata.tone || '',
         length: tweet.metadata.length || '',
-        prompt: (tweet.metadata.prompt as string) || '',
-        hasHashtags: String(tweet.metadata.hasHashtags || false),
-        hasEmoji: String(tweet.metadata.hasEmoji || false),
+        // prompt는 40자로 제한 (key + value 포함 총 124바이트 내)
+        prompt: prompt.substring(0, 40),
+        ht: String(tweet.metadata.hasHashtags || false),
+        em: String(tweet.metadata.hasEmoji || false),
       };
 
       const result = await uploadFile(tweetBlob, filename, 'tweet', metadata);
