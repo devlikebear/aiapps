@@ -9,6 +9,7 @@ import type {
   ImageEditJob,
   ImageGenerateJob,
   ImageStyleTransferJob,
+  TweetGenerateJob,
   Job,
   JobEvent,
   JobEventType,
@@ -309,6 +310,22 @@ export class JobQueueManager {
     );
   }
 
+  addTweetGenerateJob(
+    params: TweetGenerateJob['params'],
+    priority: number = DEFAULT_PRIORITY
+  ): TweetGenerateJob {
+    return this.appendJob(
+      this.createBaseJob<TweetGenerateJob>({
+        id: generateId('tweet'),
+        type: 'tweet-generate',
+        status: 'pending',
+        createdAt: Date.now(),
+        priority,
+        params,
+      })
+    );
+  }
+
   getJob(jobId: string): Job | null {
     const queue = this.loadQueue();
     const job = queue.jobs.find((item) => item.id === jobId);
@@ -527,6 +544,7 @@ export class JobQueueManager {
         'image-edit': 0,
         'image-compose': 0,
         'image-style-transfer': 0,
+        'tweet-generate': 0,
       },
     };
 

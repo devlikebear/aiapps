@@ -80,6 +80,7 @@ const JOB_LABEL: Record<Job['type'], string> = {
   'image-edit': '이미지 편집',
   'image-compose': '이미지 합성',
   'image-style-transfer': '스타일 전이',
+  'tweet-generate': '트윗 생성',
 };
 
 const getJobPromptSnippet = (job: Job): string => {
@@ -87,6 +88,7 @@ const getJobPromptSnippet = (job: Job): string => {
     case 'audio-generate':
     case 'image-generate':
     case 'image-edit':
+    case 'tweet-generate':
       return job.params.prompt;
     case 'image-style-transfer':
       return job.params.stylePrompt;

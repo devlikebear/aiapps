@@ -10,7 +10,8 @@ export type JobType =
   | 'image-generate'
   | 'image-edit'
   | 'image-compose'
-  | 'image-style-transfer';
+  | 'image-style-transfer'
+  | 'tweet-generate';
 
 export type JobStatus =
   | 'pending' // 대기 중
@@ -130,6 +131,31 @@ export interface ImageStyleTransferJob extends BaseJob {
 }
 
 /**
+ * 트윗 생성 작업
+ */
+export interface TweetGenerateJob extends BaseJob {
+  type: 'tweet-generate';
+  params: {
+    prompt: string;
+    tone: 'casual' | 'professional' | 'humorous' | 'inspirational';
+    length: 'short' | 'medium' | 'long';
+    hashtags: boolean;
+    emoji: boolean;
+    mode: string;
+  };
+  result?: {
+    tweet: string;
+    metadata: {
+      id: string;
+      prompt: string;
+      tone: string;
+      length: string;
+      createdAt: string;
+    };
+  };
+}
+
+/**
  * 작업 유니온 타입
  */
 export type Job =
@@ -137,7 +163,8 @@ export type Job =
   | ImageGenerateJob
   | ImageEditJob
   | ImageComposeJob
-  | ImageStyleTransferJob;
+  | ImageStyleTransferJob
+  | TweetGenerateJob;
 
 /**
  * 작업 큐

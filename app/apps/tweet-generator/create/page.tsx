@@ -2,25 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  Sparkles,
-  Copy,
-  Check,
-  AlertCircle,
-  Save,
-  RotateCw,
-  ArrowLeft,
-} from 'lucide-react';
-import type { TweetGenerateRequest, TweetMetadata } from '@/lib/tweet/types';
-import { TONE_DESCRIPTIONS, LENGTH_DESCRIPTIONS } from '@/lib/tweet/types';
-import { saveTweet } from '@/lib/tweet/storage';
-import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
-import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
-
-interface GeneratedTweet {
-  tweet: string;
-  metadata: TweetMetadata;
-}
+import { Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
+import { TONE_DESCRIPTIONS } from '@/lib/tweet/types';
+import { jobQueue } from '@/lib/queue';
 
 const TONE_OPTIONS = [
   { value: 'casual', label: '캐주얼' },
@@ -37,8 +21,6 @@ const LENGTH_OPTIONS = [
 
 export default function TweetGeneratePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { isAuthenticated } = useGoogleDriveStore();
-  const uploadFile = useGoogleDriveUpload();
 
   // 폼 상태
   const [prompt, setPrompt] = useState('');
@@ -51,12 +33,7 @@ export default function TweetGeneratePage() {
 
   // 생성 상태
   const [isLoading, setIsLoading] = useState(false);
-  const [generatedTweet, setGeneratedTweet] = useState<GeneratedTweet | null>(
-    null
-  );
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
 
   // 자동 높이 조정
   useEffect(() => {
@@ -74,101 +51,34 @@ export default function TweetGeneratePage() {
 
     setIsLoading(true);
     setError('');
-    setGeneratedTweet(null);
 
     try {
-      const request: TweetGenerateRequest = {
-        prompt,
+      // 작업 큐에 추가
+      jobQueue.addTweetGenerateJob({
+        prompt: prompt.trim(),
         tone,
         length,
         hashtags,
         emoji,
         mode: 'standard',
-      };
-
-      const response = await fetch('/api/tweet/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '트윗 생성에 실패했습니다');
-      }
-
-      const result = await response.json();
-      setGeneratedTweet(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '오류가 발생했습니다');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCopy = async () => {
-    if (!generatedTweet) return;
-
-    try {
-      await navigator.clipboard.writeText(generatedTweet.tweet);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError('복사에 실패했습니다');
-    }
-  };
-
-  const handleSave = async () => {
-    if (!generatedTweet) return;
-
-    try {
+      // 폼 초기화
+      setPrompt('');
       setError('');
 
-      // 1. IndexedDB에 저장
-      const storedTweet = {
-        id: generatedTweet.metadata.id,
-        tweet: generatedTweet.tweet,
-        metadata: generatedTweet.metadata,
-        createdAt: generatedTweet.metadata.createdAt,
-      };
-
-      await saveTweet(storedTweet);
-
-      // 2. Google Drive에 저장 (인증된 경우)
-      if (isAuthenticated) {
-        setIsSavingToDrive(true);
-        try {
-          const tweetContent = `${generatedTweet.tweet}\n\n---\n톤: ${generatedTweet.metadata.tone}\n길이: ${generatedTweet.metadata.length}\n생성 날짜: ${new Date(generatedTweet.metadata.createdAt).toLocaleString('ko-KR')}`;
-
-          const blob = new Blob([tweetContent], { type: 'text/plain' });
-          const timestamp = new Date()
-            .toISOString()
-            .slice(0, 19)
-            .replace(/:/g, '-');
-          const filename = `tweet-${timestamp}.txt`;
-
-          const metadata: Record<string, string> = {
-            tone: generatedTweet.metadata.tone || '',
-            length: generatedTweet.metadata.length || '',
-          };
-
-          const result = await uploadFile(blob, filename, 'audio', metadata);
-          if (result) {
-            // 메타데이터에 Google Drive ID 업데이트
-            storedTweet.metadata.googleDriveId = result.id;
-          }
-        } catch (driveError) {
-          // eslint-disable-next-line no-console
-          console.error('Google Drive 저장 실패:', driveError);
-          // Google Drive 저장 실패해도 IndexedDB에는 저장되었으므로 계속 진행
-        } finally {
-          setIsSavingToDrive(false);
-        }
-      }
-
-      alert('✓ 트윗이 라이브러리에 저장되었습니다');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '저장에 실패했습니다');
+      // 성공 메시지 표시
+      alert(
+        '✅ 트윗 생성 작업이 큐에 추가되었습니다.\n완료되면 라이브러리에서 확인할 수 있습니다.'
+      );
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : '작업 큐 추가 중 오류가 발생했습니다';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -326,94 +236,19 @@ export default function TweetGeneratePage() {
                 </div>
               )}
 
-              {generatedTweet ? (
-                <div className="space-y-4">
-                  {/* 트윗 텍스트 */}
-                  <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-                    <p className="text-white text-sm leading-relaxed">
-                      {generatedTweet.tweet}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-3">
-                      {generatedTweet.tweet.length}/
-                      {LENGTH_DESCRIPTIONS[generatedTweet.metadata.length].char}
-                      자
-                    </p>
-                  </div>
-
-                  {/* 메타데이터 */}
-                  <div className="text-xs text-gray-400 space-y-1">
-                    <p>톤: {TONE_DESCRIPTIONS[generatedTweet.metadata.tone]}</p>
-                    <p>
-                      생성:{' '}
-                      {new Date(
-                        generatedTweet.metadata.createdAt
-                      ).toLocaleString('ko-KR')}
-                    </p>
-                  </div>
-
-                  {/* 액션 버튼 */}
-                  <div className="space-y-2">
-                    <button
-                      onClick={handleCopy}
-                      className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                        copied
-                          ? 'bg-green-500/20 text-green-300 border border-green-500/50'
-                          : 'bg-sky-500/20 text-sky-300 border border-sky-500/50 hover:bg-sky-500/30'
-                      }`}
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          복사됨!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          복사
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={handleSave}
-                      disabled={isSavingToDrive}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-500/20 text-purple-300 border border-purple-500/50 hover:bg-purple-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-                    >
-                      {isSavingToDrive ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
-                          저장 중...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4" />
-                          저장
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setGeneratedTweet(null);
-                        setError('');
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-700 transition-all"
-                    >
-                      <RotateCw className="w-4 h-4" />
-                      다시 생성
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Sparkles className="w-12 h-12 text-gray-600 mx-auto mb-3 opacity-50" />
-                  <p className="text-gray-400 text-sm">
-                    프롬프트를 입력하고
-                    <br />
-                    생성하기 버튼을 클릭하세요
-                  </p>
-                </div>
-              )}
+              <div className="text-center py-8">
+                <Sparkles className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
+                <p className="text-gray-300 text-sm font-medium mb-2">
+                  작업 큐 기반 생성
+                </p>
+                <p className="text-gray-400 text-xs">
+                  생성 버튼을 누르면 백그라운드에서
+                  <br />
+                  비동기로 처리됩니다.
+                  <br />
+                  라이브러리에서 완성된 트윗을 확인하세요!
+                </p>
+              </div>
             </div>
           </div>
         </div>

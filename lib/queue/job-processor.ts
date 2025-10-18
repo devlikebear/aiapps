@@ -10,9 +10,11 @@ import type {
   ImageEditJob,
   ImageGenerateJob,
   ImageStyleTransferJob,
+  TweetGenerateJob,
   Job,
 } from './types';
 import { saveAudio, saveImage } from '@/lib/storage/indexed-db';
+import { saveTweet } from '@/lib/tweet/storage';
 import { generateAudioTags, generateImageTags } from '@/lib/utils/tags';
 import { getApiKey } from '@/lib/api-key/storage';
 import type { ArtStyle, QualityPreset } from '@/lib/art/types';
@@ -94,6 +96,9 @@ export class JobProcessor {
           break;
         case 'image-style-transfer':
           await this.processImageStyleTransferJob(job as ImageStyleTransferJob);
+          break;
+        case 'tweet-generate':
+          await this.processTweetGenerateJob(job as TweetGenerateJob);
           break;
       }
     } catch (error) {
@@ -336,6 +341,63 @@ export class JobProcessor {
 
     // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Style transfer job completed: ${job.id}`);
+  }
+
+  private async processTweetGenerateJob(job: TweetGenerateJob): Promise<void> {
+    const response = await this.fetchWithTimeout('/api/tweet/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': getApiKey('gemini') || '',
+      },
+      body: JSON.stringify({
+        prompt: job.params.prompt,
+        tone: job.params.tone,
+        length: job.params.length,
+        hashtags: job.params.hashtags,
+        emoji: job.params.emoji,
+        mode: job.params.mode,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Tweet generation failed');
+    }
+
+    const result = await response.json();
+    const tweet = result.tweet as string;
+
+    const tweetMetadata = {
+      id: job.id,
+      prompt: job.params.prompt,
+      tone: job.params.tone,
+      length: job.params.length,
+      hasHashtags: job.params.hashtags,
+      hasEmoji: job.params.emoji,
+      createdAt: new Date().toISOString(),
+    };
+
+    const completedJob = jobQueue.updateJob(job.id, {
+      status: 'completed',
+      progress: 100,
+      result: {
+        tweet,
+        metadata: tweetMetadata,
+      },
+    });
+
+    if (completedJob) {
+      await saveTweet({
+        id: job.id,
+        tweet,
+        metadata: tweetMetadata,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(`[JobProcessor] Tweet generation job completed: ${job.id}`);
   }
 
   private async saveAudio(

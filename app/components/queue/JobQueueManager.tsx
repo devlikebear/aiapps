@@ -47,6 +47,7 @@ const JOB_TYPE_LABEL: Record<Job['type'], string> = {
   'image-edit': '이미지 편집',
   'image-compose': '이미지 합성',
   'image-style-transfer': '스타일 전이',
+  'tweet-generate': '트윗 생성',
 };
 
 type JobStatsMap = Record<JobStatus | 'total', number>;
