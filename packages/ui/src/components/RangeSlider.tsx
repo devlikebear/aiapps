@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
+import { InputHTMLAttributes, forwardRef, useId } from 'react';
 import { clsx } from 'clsx';
 
 export interface RangeSliderProps
@@ -28,8 +28,8 @@ export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(
     },
     ref
   ) => {
-    const sliderId =
-      id || `range-slider-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useId();
+    const sliderId = id || `range-slider-${generatedId}`;
 
     return (
       <div className={clsx('space-y-2', { 'w-full': fullWidth })}>

@@ -1,4 +1,4 @@
-import { SelectHTMLAttributes, forwardRef } from 'react';
+import { SelectHTMLAttributes, forwardRef, useId } from 'react';
 import { clsx } from 'clsx';
 import { ChevronDown } from 'lucide-react';
 
@@ -25,7 +25,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     },
     ref
   ) => {
-    const selectId = id || 'select-' + Date.now();
+    const generatedId = useId();
+    const selectId = id || `select-${generatedId}`;
 
     return (
       <div className={clsx('space-y-1', { 'w-full': fullWidth })}>

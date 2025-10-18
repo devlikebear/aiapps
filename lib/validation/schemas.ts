@@ -13,9 +13,9 @@ import { z } from 'zod';
 const promptSchema = z
   .string()
   .min(3, 'Prompt must be at least 3 characters')
-  .max(1000, 'Prompt must be less than 1000 characters')
+  .max(2000, 'Prompt must be less than 2000 characters')
   .regex(
-    /^[a-zA-Z0-9가-힣\s\.,!?'"()-]+$/,
+    /^[a-zA-Z0-9가-힣\s\.,!?'"()\-/&]+$/,
     'Prompt contains invalid characters'
   )
   .transform((val) => val.trim());
@@ -35,6 +35,7 @@ export const audioGenerateRequestSchema = z.object({
     errorMap: () => ({ message: 'Type must be either bgm or sfx' }),
   }),
   genre: z.string().min(1, 'Genre is required').max(50),
+  audioType: z.enum(['bgm', 'sfx']).optional(), // 호환성을 위한 별칭
   bpm: z
     .number()
     .int()
@@ -44,10 +45,22 @@ export const audioGenerateRequestSchema = z.object({
   duration: z
     .number()
     .positive('Duration must be positive')
-    .min(5, 'Duration must be at least 5 seconds')
-    .max(60, 'Duration must be at most 60 seconds'),
+    .min(0.1, 'Duration must be at least 0.1 seconds')
+    .max(300, 'Duration must be at most 300 seconds'),
+  density: z
+    .number()
+    .min(0, 'Density must be between 0 and 1')
+    .max(1, 'Density must be between 0 and 1')
+    .optional(),
+  brightness: z
+    .number()
+    .min(0, 'Brightness must be between 0 and 1')
+    .max(1, 'Brightness must be between 0 and 1')
+    .optional(),
+  scale: z.enum(['major', 'minor']).optional(),
   mood: z.string().max(50).optional(),
   instruments: z.array(z.string().max(50)).max(10).optional(),
+  mode: z.enum(['preset', 'freeform']).optional(),
 });
 
 export type AudioGenerateRequest = z.infer<typeof audioGenerateRequestSchema>;

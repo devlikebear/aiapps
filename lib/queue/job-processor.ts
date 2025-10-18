@@ -16,6 +16,7 @@ import { saveAudio, saveImage } from '@/lib/storage/indexed-db';
 import { generateAudioTags, generateImageTags } from '@/lib/utils/tags';
 import { getApiKey } from '@/lib/api-key/storage';
 import type { ArtStyle, QualityPreset } from '@/lib/art/types';
+import type { AudioMetadata } from '@/lib/audio/types';
 
 const POLL_INTERVAL = 5000; // 5초
 const MAX_CONCURRENT_JOBS = 2;
@@ -348,19 +349,50 @@ export class JobProcessor {
       duration: job.params.duration,
     });
 
+    // AudioMetadata 구성 (필수 필드 포함)
+    const audioMetadata: AudioMetadata = {
+      id: job.id,
+      type: job.params.audioType as 'bgm' | 'sfx',
+      genre: job.params.genre as 'rpg' | 'fps' | 'puzzle' | 'racing' | 'retro',
+      format: 'wav',
+      duration: job.params.duration ?? 30,
+      fileSize: 0, // Base64 크기는 정확하지 않으므로 0으로 설정
+      sampleRate: 48000, // Gemini 기본값
+      bitDepth: 16,
+      channels: 2,
+      bpm: job.params.bpm,
+      scale: job.params.scale,
+      prompt: job.params.prompt,
+      createdAt: new Date() as unknown as Date,
+      isCompressed: false,
+    };
+
+    // Base64 문자열을 ArrayBuffer로 변환
+    const binaryString = atob(result.audioBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const arrayBuffer = bytes.buffer;
+
+    // IndexedDB에 저장
     await saveAudio({
-      id: `${job.id}-${Date.now()}`,
+      id: job.id,
       blobUrl: '',
       data: result.audioBase64,
-      metadata: {
-        ...result.metadata,
-        prompt: job.params.prompt,
-        genre: job.params.genre,
-        type: job.params.audioType,
-        createdAt: new Date().toISOString(),
-      },
+      metadata: audioMetadata,
       tags,
     });
+
+    // audioStore에도 업데이트 (재생용)
+    try {
+      const { useAudioStore } = await import('@/lib/stores/audio-store');
+      const audioStore = useAudioStore.getState();
+      audioStore.setGeneratedAudio(arrayBuffer, audioMetadata);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[JobProcessor] Failed to update audio store:', err);
+    }
   }
 
   private async saveGeneratedImages(

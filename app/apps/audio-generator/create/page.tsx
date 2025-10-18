@@ -8,11 +8,15 @@ import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType } from '@/lib/audio/types';
 import AudioPlayer from '@/components/audio/AudioPlayer';
+import PresetSelector from '@/components/audio/PresetSelector';
+import AudioPromptBuilder from '@/components/audio/AudioPromptBuilder';
 import { downloadAudio } from '@/lib/audio/converter';
 import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
 import { getAllAudio } from '@/lib/storage/indexed-db';
 import { generateAudioTags } from '@/lib/utils/tags';
+import { getBuiltinAudioPresetsByType } from '@/lib/audio/builtin-presets';
+import type { AudioPresetBuilderSchema } from '@/lib/audio/preset-builder-schema';
 import { Play, Pause, Download, Cloud } from 'lucide-react';
 
 interface StoredAudio {
@@ -40,6 +44,11 @@ export default function AudioCreatePage() {
   const [duration, setDuration] = useState(60);
   const [customBpm, setCustomBpm] = useState<number | null>(null);
 
+  // Preset builder state
+  const [usePresetBuilder, setUsePresetBuilder] = useState(false);
+  const [selectedPreset, setSelectedPreset] =
+    useState<AudioPresetBuilderSchema | null>(null);
+
   // Related audio state
   const [relatedAudio, setRelatedAudio] = useState<StoredAudio[]>([]);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -56,6 +65,20 @@ export default function AudioCreatePage() {
   useEffect(() => {
     setDuration(type === 'bgm' ? 60 : 5);
   }, [type]);
+
+  // 프리셋 모드 변경 시 초기화
+  useEffect(() => {
+    if (usePresetBuilder) {
+      // 프리셋 빌더 모드 활성화 시 기본 프리셋 선택
+      const presets = getBuiltinAudioPresetsByType(type);
+      if (presets.length > 0) {
+        setSelectedPreset(presets[0]);
+      }
+    } else {
+      // 자유형 모드로 전환 시 프리셋 초기화
+      setSelectedPreset(null);
+    }
+  }, [usePresetBuilder, type]);
 
   // 관련 오디오 로드 및 필터링
   useEffect(() => {
@@ -311,23 +334,68 @@ export default function AudioCreatePage() {
             </div>
           </div>
 
-          {/* Prompt */}
+          {/* Prompt Input Mode Toggle */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              프롬프트 <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={
-                type === 'bgm'
-                  ? '예: 던전 탐험 중 긴장감 넘치는 배경 음악'
-                  : '예: 코인 획득 시 밝고 경쾌한 효과음'
-              }
-              rows={4}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setUsePresetBuilder(false)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  !usePresetBuilder
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                ✍️ 자유형 입력
+              </button>
+              <button
+                onClick={() => setUsePresetBuilder(true)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  usePresetBuilder
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                🎛️ 프리셋 빌더
+              </button>
+            </div>
           </div>
+
+          {/* Prompt - Free Form Mode */}
+          {!usePresetBuilder && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                프롬프트 <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={
+                  type === 'bgm'
+                    ? '예: 던전 탐험 중 긴장감 넘치는 배경 음악'
+                    : '예: 코인 획득 시 밝고 경쾌한 효과음'
+                }
+                rows={4}
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+          )}
+
+          {/* Prompt - Preset Builder Mode */}
+          {usePresetBuilder && selectedPreset && (
+            <div className="space-y-4">
+              {/* Preset Selector */}
+              <PresetSelector
+                onPresetSelect={(preset) => setSelectedPreset(preset)}
+                selectedPreset={selectedPreset}
+              />
+
+              {/* Prompt Builder */}
+              <AudioPromptBuilder
+                preset={selectedPreset}
+                onPromptChange={(generatedPrompt) => setPrompt(generatedPrompt)}
+              />
+            </div>
+          )}
 
           {/* Duration & BPM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

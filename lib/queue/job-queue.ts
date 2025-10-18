@@ -105,21 +105,64 @@ export class JobQueueManager {
     if (typeof window === 'undefined') return;
 
     try {
-      if (queue.jobs.length > MAX_QUEUE_SIZE) {
-        queue.jobs = queue.jobs
-          .sort((a, b) => {
-            const aTime = a.completedAt ?? a.createdAt;
-            const bTime = b.completedAt ?? b.createdAt;
-            return bTime - aTime;
-          })
-          .slice(0, MAX_QUEUE_SIZE);
+      // 완료되지 않은 작업은 유지, 완료된 작업은 최근 10개만 유지
+      const pendingJobs = queue.jobs.filter(
+        (job) => job.status !== 'completed'
+      );
+      const completedJobs = queue.jobs
+        .filter((job) => job.status === 'completed')
+        .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+        .slice(0, 10);
+
+      const jobsToSave = [...pendingJobs, ...completedJobs];
+
+      if (jobsToSave.length > MAX_QUEUE_SIZE) {
+        jobsToSave.slice(0, MAX_QUEUE_SIZE);
       }
 
+      // 저장할 데이터에서 무거운 result 필드 제거 (메타데이터만 유지)
+      const lightweightJobs = jobsToSave.map((job) => {
+        if (job.status === 'completed' && job.result) {
+          // 결과 데이터는 IndexedDB에 저장되므로 큐에서는 제거
+          const { result: _unused, ...rest } = job;
+          return rest as Job;
+        }
+        return job;
+      });
+
       queue.lastUpdated = Date.now();
-      window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+      const dataToStore = JSON.stringify({
+        jobs: lightweightJobs,
+        lastUpdated: queue.lastUpdated,
+      });
+
+      // localStorage 크기 초과 확인
+      const estimatedSize = new Blob([dataToStore]).size;
+      if (estimatedSize > 5 * 1024 * 1024) {
+        // 5MB 초과 시 경고
+        // eslint-disable-next-line no-console
+        console.warn('[JobQueue] Estimated data size is large:', estimatedSize);
+      }
+
+      window.localStorage.setItem(QUEUE_STORAGE_KEY, dataToStore);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('[JobQueue] failed to save queue:', error);
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        // localStorage 크기 초과 시 완료된 작업 모두 제거
+        // eslint-disable-next-line no-console
+        console.warn('[JobQueue] localStorage quota exceeded, cleaning up...');
+        try {
+          const queue = this.loadQueue();
+          queue.jobs = queue.jobs.filter((job) => job.status !== 'completed');
+          queue.lastUpdated = Date.now();
+          window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+        } catch {
+          // 여전히 실패 시 큐 초기화
+          window.localStorage.removeItem(QUEUE_STORAGE_KEY);
+        }
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('[JobQueue] failed to save queue:', error);
+      }
     }
   }
 
