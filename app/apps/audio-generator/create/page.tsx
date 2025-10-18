@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button, Select, Input } from '@aiapps/ui';
+import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useAudioStore } from '@/lib/stores/audio-store';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType } from '@/lib/audio/types';
@@ -273,23 +273,15 @@ export default function AudioCreatePage() {
           {/* Duration & BPM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Duration */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                재생 시간 (초): {duration}초
-              </label>
-              <input
-                type="range"
-                min={type === 'bgm' ? 30 : 1}
-                max={type === 'bgm' ? 300 : 10}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>{type === 'bgm' ? '30초' : '1초'}</span>
-                <span>{type === 'bgm' ? '5분' : '10초'}</span>
-              </div>
-            </div>
+            <RangeSlider
+              label="재생 시간"
+              min={type === 'bgm' ? 30 : 1}
+              max={type === 'bgm' ? 300 : 10}
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              helperText={`${type === 'bgm' ? '30초 ~ 5분' : '1초 ~ 10초'}`}
+              fullWidth
+            />
 
             {/* BPM */}
             <div>

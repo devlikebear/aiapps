@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Download, Trash2, Eye, Wand2 } from 'lucide-react';
-import { Button, Select, Input } from '@aiapps/ui';
+import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useArtStore } from '@/lib/stores/art-store';
 import {
   ART_STYLE_PRESETS,
@@ -492,23 +492,16 @@ export default function ArtCreatePage() {
           {/* Batch Size & Seed */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Batch Size */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                생성 개수: {batchSize}개
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={4}
-                value={batchSize}
-                onChange={(e) => setBatchSize(Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>1개</span>
-                <span>4개</span>
-              </div>
-            </div>
+            <RangeSlider
+              label="생성 개수"
+              min={1}
+              max={4}
+              step={1}
+              value={batchSize}
+              onChange={(e) => setBatchSize(Number(e.target.value))}
+              helperText="한 번에 생성할 이미지 개수 (1~4개)"
+              fullWidth
+            />
 
             {/* Seed */}
             <div>
