@@ -1803,11 +1803,11 @@ export default function LibraryContent() {
                     {sortedTweets.map((tweet) => (
                       <div
                         key={tweet.id}
-                        className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 hover:border-cyan-500 transition-all flex flex-col"
+                        className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 hover:border-cyan-500 transition-all flex flex-col overflow-hidden"
                       >
                         {/* 트윗 내용 */}
-                        <div className="flex-1 mb-3">
-                          <p className="text-white text-sm leading-relaxed mb-2">
+                        <div className="flex-1 mb-3 min-w-0">
+                          <p className="text-white text-sm leading-relaxed mb-2 break-words whitespace-pre-wrap overflow-hidden">
                             {tweet.tweet}
                           </p>
                           <p className="text-xs text-gray-400">
