@@ -12,7 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { useJobQueueStore } from '@/stores/job-queue-store';
+import { useJobQueueStore } from '@/lib/stores/job-queue-store';
 import type { Job, JobStatus } from '@/lib/queue';
 
 const JOB_STATUS_ORDER: Array<JobStatus | 'all'> = [
