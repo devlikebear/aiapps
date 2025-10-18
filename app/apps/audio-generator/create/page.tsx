@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@aiapps/ui';
+import { Button, Select } from '@aiapps/ui';
 import { useAudioStore } from '@/lib/stores/audio-store';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType } from '@/lib/audio/types';
@@ -219,41 +219,36 @@ export default function AudioCreatePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Audio Type */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                오디오 타입
-              </label>
-              <select
+              <Select
+                label="오디오 타입"
                 value={type}
                 onChange={(e) => setType(e.target.value as AudioType)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="bgm">🎼 배경 음악 (BGM)</option>
-                <option value="sfx">⚡ 효과음 (SFX)</option>
-              </select>
-              <p className="mt-2 text-xs text-gray-500">
-                {type === 'bgm'
-                  ? '루프 가능한 배경 음악 (30초~5분)'
-                  : '짧은 효과음 (0.1초~3초)'}
-              </p>
+                options={[
+                  { value: 'bgm', label: '🎼 배경 음악 (BGM)' },
+                  { value: 'sfx', label: '⚡ 효과음 (SFX)' },
+                ]}
+                helperText={
+                  type === 'bgm'
+                    ? '루프 가능한 배경 음악 (30초~5분)'
+                    : '짧은 효과음 (0.1초~3초)'
+                }
+                fullWidth
+              />
             </div>
 
             {/* Game Genre */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                게임 장르
-              </label>
-              <select
+              <Select
+                label="게임 장르"
                 value={genre}
                 onChange={(e) => setGenre(e.target.value as GameGenre)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {Object.entries(GAME_PRESETS).map(([key, preset]) => (
-                  <option key={key} value={key}>
-                    {preset.icon} {preset.name}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs text-gray-500">{preset.description}</p>
+                options={Object.entries(GAME_PRESETS).map(([key, preset]) => ({
+                  value: key,
+                  label: `${preset.icon} ${preset.name}`,
+                }))}
+                helperText={preset.description}
+                fullWidth
+              />
             </div>
           </div>
 
