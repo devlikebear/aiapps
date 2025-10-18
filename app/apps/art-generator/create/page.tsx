@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Download, Trash2, Eye, Wand2 } from 'lucide-react';
+import { Download, Trash2, Eye, Wand2, Cloud } from 'lucide-react';
 import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useArtStore } from '@/lib/stores/art-store';
+import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
+import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 import {
   ART_STYLE_PRESETS,
   USAGE_TYPE_PRESETS,
@@ -65,9 +67,12 @@ interface StoredImage {
 
 export default function ArtCreatePage() {
   const { error, generatedImages, setError, removeImage } = useArtStore();
+  const { isAuthenticated } = useGoogleDriveStore();
+  const uploadFile = useGoogleDriveUpload();
 
   // Form state
   const [usageType, setUsageType] = useState<UsageType>('game');
+  const [isSavingToDrive, setIsSavingToDrive] = useState<string | null>(null);
   const [currentTheme, setCurrentTheme] = useState<PromptTheme | null>(null);
   const [availableArtStyles, setAvailableArtStyles] = useState<
     Array<{ value: ArtStyle; label: string; description: string }>
@@ -292,6 +297,59 @@ export default function ArtCreatePage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Google Drive 저장 핸들러
+  const handleSaveToGoogleDrive = async (
+    image: (typeof generatedImages)[0]
+  ) => {
+    if (!isAuthenticated) {
+      setError('Google Drive에 저장하려면 먼저 로그인해주세요');
+      return;
+    }
+
+    setIsSavingToDrive(image.id);
+    try {
+      // Blob URL에서 fetch로 이미지 데이터 가져오기
+      const response = await fetch(image.blobUrl);
+      const blob = await response.blob();
+
+      // 파일명 생성
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, '-');
+      const filename = `art-${timestamp}.png`;
+
+      // 메타데이터
+      const metadata: Record<string, string> = {
+        prompt: image.metadata.prompt || '',
+        style: image.metadata.style || '',
+        width: String(image.metadata.width || ''),
+        height: String(image.metadata.height || ''),
+        quality: image.metadata.quality || '',
+        seed: image.metadata.seed ? String(image.metadata.seed) : '',
+      };
+
+      // Google Drive 업로드
+      const result = await uploadFile(blob, filename, 'image', metadata);
+
+      if (result) {
+        setError('');
+        // 성공 메시지
+        alert('✅ 이미지가 Google Drive에 저장되었습니다!');
+      } else {
+        setError('Google Drive 저장에 실패했습니다');
+      }
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Google Drive 저장 중 오류 발생';
+      setError(errorMessage);
+      // eslint-disable-next-line no-console
+      console.error('Google Drive save error:', err);
+    } finally {
+      setIsSavingToDrive(null);
+    }
   };
 
   return (
@@ -611,6 +669,27 @@ export default function ArtCreatePage() {
                       >
                         <Download className="w-4 h-4" />
                         JPG
+                      </Button>
+                      <Button
+                        onClick={() => handleSaveToGoogleDrive(image)}
+                        disabled={
+                          isSavingToDrive === image.id || !isAuthenticated
+                        }
+                        variant="primary"
+                        size="sm"
+                        className="flex-1 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50"
+                      >
+                        {isSavingToDrive === image.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-cyan-200 mr-1" />
+                            저장 중...
+                          </>
+                        ) : (
+                          <>
+                            <Cloud className="w-4 h-4" />
+                            저장
+                          </>
+                        )}
                       </Button>
                       <Button
                         onClick={() => removeImage(image.id)}
