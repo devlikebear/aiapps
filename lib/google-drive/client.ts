@@ -49,7 +49,12 @@ export async function ensureGoogleDriveFolder(
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to query folders: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        (errorData as Record<string, unknown>).error || response.statusText;
+      throw new Error(
+        `Failed to query folders: ${response.status} ${JSON.stringify(errorMessage)}`
+      );
     }
 
     const data = (await response.json()) as { files?: GoogleDriveFile[] };
@@ -77,7 +82,13 @@ export async function ensureGoogleDriveFolder(
     );
 
     if (!createResponse.ok) {
-      throw new Error(`Failed to create folder: ${createResponse.statusText}`);
+      const errorData = await createResponse.json().catch(() => ({}));
+      const errorMessage =
+        (errorData as Record<string, unknown>).error ||
+        createResponse.statusText;
+      throw new Error(
+        `Failed to create folder: ${createResponse.status} ${JSON.stringify(errorMessage)}`
+      );
     }
 
     const createdFolder = (await createResponse.json()) as GoogleDriveFile;
@@ -132,7 +143,12 @@ export async function uploadFileToGoogleDrive(
     );
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        (errorData as Record<string, unknown>).error || response.statusText;
+      throw new Error(
+        `Upload failed: ${response.status} ${JSON.stringify(errorMessage)}`
+      );
     }
 
     const uploadedFile = (await response.json()) as GoogleDriveFile;
@@ -178,7 +194,12 @@ export async function listFilesFromGoogleDrive(
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to list files: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        (errorData as Record<string, unknown>).error || response.statusText;
+      throw new Error(
+        `Failed to list files: ${response.status} ${JSON.stringify(errorMessage)}`
+      );
     }
 
     const data = (await response.json()) as {
@@ -212,7 +233,12 @@ export async function deleteFileFromGoogleDrive(
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to delete file: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        (errorData as Record<string, unknown>).error || response.statusText;
+      throw new Error(
+        `Failed to delete file: ${response.status} ${JSON.stringify(errorMessage)}`
+      );
     }
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -261,7 +287,12 @@ export async function shareGoogleDriveFile(
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to share file: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        (errorData as Record<string, unknown>).error || response.statusText;
+      throw new Error(
+        `Failed to share file: ${response.status} ${JSON.stringify(errorMessage)}`
+      );
     }
 
     // 공유 링크 반환
