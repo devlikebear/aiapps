@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ListTodo, Loader2 } from 'lucide-react';
-import { useJobQueueStore } from '@/stores/job-queue-store';
+import { useJobQueueStore } from '@/lib/stores/job-queue-store';
 import type { Job } from '@/lib/queue';
 import JobQueueManager from './JobQueueManager';
 

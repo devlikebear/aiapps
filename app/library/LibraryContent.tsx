@@ -45,7 +45,7 @@ import {
   type ImportProgressCallback,
   type DuplicateStrategy,
 } from '@/lib/utils/gallery-import';
-import { useJobQueueStore } from '@/stores/job-queue-store';
+import { useJobQueueStore } from '@/lib/stores/job-queue-store';
 import type { Job } from '@/lib/queue';
 
 type MediaType = 'all' | 'audio' | 'image';
