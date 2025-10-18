@@ -61,23 +61,37 @@
 
 ### 파일별 테스트
 ```
-✓ lib/queue/job-queue.test.ts                     (8 tests)
-✓ lib/ai/utils/__tests__/api-error-handling.test.ts (11 tests)
-✓ lib/ai/utils/__tests__/retry.test.ts            (4 tests)
-✓ packages/ui/src/components/Button.test.tsx      (8 tests)
-✓ packages/ui/src/components/Input.test.tsx       (10 tests)
-✓ packages/ui/src/components/Card.test.tsx        (4 tests)
-✓ lib/ai/utils/__tests__/rate-limiter.test.ts     (5 tests)
+✓ lib/queue/job-queue.test.ts                           (8 tests)
+✓ lib/ai/utils/__tests__/api-error-handling.test.ts     (11 tests)
+✓ lib/ai/utils/__tests__/validation.test.ts            (17 tests)
+✓ lib/ai/utils/__tests__/storage.test.ts               (21 tests)
+✓ lib/stores/__tests__/store-patterns.test.ts          (24 tests) [NEW]
+✓ lib/ai/utils/__tests__/retry.test.ts                 (4 tests)
+✓ packages/ui/src/components/Button.test.tsx           (8 tests)
+✓ packages/ui/src/components/Input.test.tsx            (10 tests)
+✓ packages/ui/src/components/Card.test.tsx             (4 tests)
+✓ lib/ai/utils/__tests__/rate-limiter.test.ts          (5 tests)
 
-총계: 50 tests, 100% 통과율
+총계: 112 tests, 100% 통과율 ✅
 ```
 
 ### 테스트 실행 시간
-- 변환: 204ms
-- 설정: 529ms
-- 수집: 774ms
-- 테스트 실행: 1.32s
-- **총 시간: 2.72초**
+- 변환: 266ms
+- 설정: 766ms
+- 수집: 699ms
+- 테스트 실행: 1.15s
+- **총 시간: 1.88초**
+
+### 테스트별 상세 통계
+
+| 범주 | 파일 | 테스트 수 | 내용 |
+|------|------|----------|------|
+| **AI 유틸리티** | 5 | 53 | Retry, Rate Limiter, 에러 처리, 검증, 저장소 |
+| **Job Queue** | 1 | 8 | 상태 관리, 생명주기 |
+| **상태 관리** | 1 | 24 | 스토어 패턴, 구독, 타입 안전성 |
+| **UI 컴포넌트** | 3 | 22 | Button, Input, Card |
+| **기타** | - | 5 | Rate Limiter 추가 |
+| **합계** | **10** | **112** | **100% 통과율** |
 
 ## 테스트 인프라 개선
 

@@ -205,7 +205,6 @@ describe('Store Patterns', () => {
 
   describe('Subscriptions', () => {
     it('should call subscriber on state change', () => {
-      const callback = () => {};
       let callCount = 0;
 
       store.subscribe(() => {
@@ -222,11 +221,11 @@ describe('Store Patterns', () => {
     it('should support multiple subscribers', () => {
       const calls: number[] = [];
 
-      const unsubscribe1 = store.subscribe(() => {
+      store.subscribe(() => {
         calls.push(1);
       });
 
-      const unsubscribe2 = store.subscribe(() => {
+      store.subscribe(() => {
         calls.push(2);
       });
 
