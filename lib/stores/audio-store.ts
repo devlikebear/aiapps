@@ -104,8 +104,22 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
 
   setGeneratedAudio: (audioData, metadata) => {
     try {
+      // ArrayBuffer → Uint8Array 검증
+      if (!(audioData instanceof ArrayBuffer)) {
+        throw new Error(
+          `Invalid audioData type: expected ArrayBuffer, got ${typeof audioData}`
+        );
+      }
+
+      // Blob URL 생성 (재생용)
       const blob = new Blob([audioData], { type: 'audio/wav' });
       const audioUrl = URL.createObjectURL(blob);
+
+      // eslint-disable-next-line no-console
+      console.log(
+        '[AudioStore] Generated Blob URL:',
+        audioUrl.substring(0, 50)
+      );
 
       const generatedAudio: GeneratedAudio = {
         id: metadata.id,
@@ -115,14 +129,16 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
         createdAt: new Date(),
       };
 
-      // IndexedDB에 저장 (비동기이지만 await하지 않음)
-      // ArrayBuffer → Base64 변환 (브라우저 환경)
+      // ArrayBuffer → Base64 변환 (브라우저 환경, IndexedDB 저장용)
       const bytes = new Uint8Array(audioData);
       let binary = '';
       for (let i = 0; i < bytes.byteLength; i++) {
         binary += String.fromCharCode(bytes[i]);
       }
       const base64 = btoa(binary);
+
+      // eslint-disable-next-line no-console
+      console.log('[AudioStore] Base64 encoded, size:', base64.length, 'bytes');
 
       saveAudio({
         id: metadata.id,
@@ -131,7 +147,7 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
         metadata,
       }).catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('Failed to save audio to IndexedDB:', err);
+        console.error('[AudioStore] Failed to save audio to IndexedDB:', err);
       });
 
       set({
@@ -142,10 +158,19 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
           currentTime: 0,
         },
       });
+
+      // eslint-disable-next-line no-console
+      console.log('[AudioStore] Audio ready for playback:', {
+        id: metadata.id,
+        duration: metadata.duration,
+        audioUrlValid: audioUrl.startsWith('blob:'),
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[AudioStore] setGeneratedAudio error:', err);
-      set({ error: 'Audio data processing failed' });
+      set({
+        error: `Audio data processing failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
     }
   },
 

@@ -29,7 +29,7 @@ function AudioPlayer() {
     if (!audio || !currentAudio) return;
 
     try {
-      // audioUrl이 유효한 Blob URL인지 확인
+      // audioUrl이 유효한 형식인지 확인 (Blob URL 또는 Data URL)
       if (typeof currentAudio.audioUrl !== 'string') {
         // eslint-disable-next-line no-console
         console.error(
@@ -39,11 +39,15 @@ function AudioPlayer() {
         return;
       }
 
-      if (!currentAudio.audioUrl.startsWith('blob:')) {
+      const isValidUrl =
+        currentAudio.audioUrl.startsWith('blob:') ||
+        currentAudio.audioUrl.startsWith('data:audio/');
+
+      if (!isValidUrl) {
         // eslint-disable-next-line no-console
         console.warn(
-          '[AudioPlayer] audioUrl is not a Blob URL:',
-          currentAudio.audioUrl
+          '[AudioPlayer] audioUrl is not a valid Blob URL or Data URL:',
+          currentAudio.audioUrl.substring(0, 100)
         );
       }
 
