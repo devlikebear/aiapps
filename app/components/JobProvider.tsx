@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { jobProcessor } from '@/lib/queue/job-processor';
-import JobToast from './JobToast';
+import JobToast from '@/components/JobToast';
 
 /**
  * 작업 프로세서 프로바이더

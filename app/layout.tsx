@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import GlobalNav from '@/components/GlobalNav';
+import GlobalNav from '@/components/layout/GlobalNav';
 import JobProvider from '@/components/JobProvider';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/react';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';

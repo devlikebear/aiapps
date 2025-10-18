@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { hasApiKey } from '@/lib/api-key/storage';
-import ApiKeySettings from './ApiKeySettings';
+import ApiKeySettings from '@/components/ApiKeySettings';
 
 export default function AppHeader() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

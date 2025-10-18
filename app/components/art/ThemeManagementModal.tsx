@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { PromptTheme } from '@/lib/art/prompt-theme';
 import type { UsageType, ArtStyle } from '@/lib/art/types';
-import { PresetBuilderEditor } from './PresetBuilderEditor';
+import { PresetBuilderEditor } from '@/components/art/PresetBuilderEditor';
 import type { PresetBuilderSchema } from '@/lib/art/preset-builder-schema';
 import { createEmptyPresetSchema } from '@/lib/art/preset-builder-schema';
 import {

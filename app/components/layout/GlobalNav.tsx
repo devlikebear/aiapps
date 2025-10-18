@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Music, ImageIcon, Library } from 'lucide-react';
 import { hasApiKey } from '@/lib/api-key/storage';
-import ApiKeySettings from './ApiKeySettings';
+import ApiKeySettings from '@/components/ApiKeySettings';
 import JobQueueButton from '@/components/queue/JobQueueButton';
 
 interface App {
