@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AlertCircle, ArrowRight } from 'lucide-react';
 
 type AppStatus = 'available' | 'coming-soon';
 type AppColor = 'blue' | 'purple' | 'pink' | 'cyan' | 'green';
@@ -78,10 +79,16 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center pt-4 px-4">
             <Link
-              href="/apps"
-              className="btn-primary touch-target w-full sm:w-auto"
+              href="/onboarding"
+              className="btn-primary touch-target w-full sm:w-auto inline-flex items-center justify-center gap-2"
             >
-              앱 둘러보기
+              🚀 시작하기 <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/help"
+              className="btn-outline touch-target w-full sm:w-auto"
+            >
+              사용 가이드
             </Link>
             <Link
               href="https://github.com/devlikebear/aiapps"
@@ -91,6 +98,44 @@ export default function Home() {
             >
               GitHub
             </Link>
+          </div>
+        </section>
+
+        {/* API Key Setup Notice */}
+        <section className="mt-8 px-4">
+          <div className="app-card bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 backdrop-blur-sm">
+            <div className="flex gap-4 items-start">
+              <AlertCircle className="w-6 h-6 text-amber-400 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white mb-2">
+                  ⚡ Gemini API 키가 필요합니다
+                </h3>
+                <p className="text-gray-300 text-sm mb-4">
+                  이 앱을 사용하려면 Google Cloud Console에서 Gemini API 키를
+                  생성하고 설정해야 합니다.
+                  <strong className="text-amber-300">
+                    {' '}
+                    API 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.
+                  </strong>
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/onboarding"
+                    className="px-4 py-2 bg-gradient-to-r from-sky-500 to-purple-600 hover:from-sky-600 hover:to-purple-700 text-white rounded-lg font-medium text-sm transition-all inline-flex items-center justify-center gap-2 touch-target"
+                  >
+                    API 키 설정 가이드 <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <a
+                    href="https://console.cloud.google.com/apis/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 rounded-lg font-medium text-sm transition-all inline-flex items-center justify-center gap-2 touch-target"
+                  >
+                    Google Cloud Console 열기 ↗
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
