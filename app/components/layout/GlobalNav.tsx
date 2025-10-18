@@ -39,6 +39,13 @@ const APPS: App[] = [
     path: '/apps/art-generator/create',
     description: '2D 게임 아트 생성',
   },
+  {
+    id: 'tweet',
+    name: '트윗 생성기',
+    icon: '✨',
+    path: '/apps/tweet-generator/create',
+    description: 'AI 기반 트윗 자동 생성',
+  },
 ];
 
 function GlobalNav() {
