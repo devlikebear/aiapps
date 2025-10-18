@@ -271,6 +271,32 @@ export default function LibraryContent() {
   }, [queueJobs, loadMedia]);
 
   // Audio player controls
+  // Data URL을 실제 Blob URL로 변환
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    try {
+      // data:audio/wav;base64, 부분 제거
+      const base64String = dataUrl.split(',')[1];
+      if (!base64String) {
+        throw new Error('Invalid data URL format');
+      }
+
+      // Base64 → 바이너리 문자열
+      const binaryString = atob(base64String);
+      // 바이너리 문자열 → Uint8Array
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Uint8Array → Blob
+      return new Blob([bytes], { type: 'audio/wav' });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[LibraryContent] dataUrlToBlob error:', error);
+      throw error;
+    }
+  };
+
   const togglePlayAudio = (audioId: string, blobUrl: string) => {
     if (currentAudio === audioId && isPlaying) {
       audioElement?.pause();
@@ -280,16 +306,52 @@ export default function LibraryContent() {
         audioElement.pause();
       }
 
-      const audio = new Audio(blobUrl);
-      audio.play();
-      audio.onended = () => {
-        setIsPlaying(false);
-        setCurrentAudio(null);
-      };
+      try {
+        let audioUrl = blobUrl;
 
-      setAudioElement(audio);
-      setCurrentAudio(audioId);
-      setIsPlaying(true);
+        // Data URL인 경우 Blob URL로 변환
+        if (blobUrl.startsWith('data:audio/')) {
+          const blob = dataUrlToBlob(blobUrl);
+          audioUrl = URL.createObjectURL(blob);
+          // eslint-disable-next-line no-console
+          console.log(
+            '[LibraryContent] Converted data URL to Blob URL:',
+            audioUrl.substring(0, 50)
+          );
+        }
+
+        const audio = new Audio(audioUrl);
+        audio.addEventListener('error', () => {
+          // eslint-disable-next-line no-console
+          console.error('[LibraryContent] Audio error:', {
+            error: audio.error?.message,
+            code: audio.error?.code,
+            src: audio.src,
+          });
+        });
+
+        audio.play().catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('[LibraryContent] Play error:', err);
+        });
+
+        audio.onended = () => {
+          setIsPlaying(false);
+          setCurrentAudio(null);
+          // Data URL에서 변환된 Blob URL이면 정리
+          if (blobUrl.startsWith('data:audio/')) {
+            URL.revokeObjectURL(audioUrl);
+          }
+        };
+
+        setAudioElement(audio);
+        setCurrentAudio(audioId);
+        setIsPlaying(true);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[LibraryContent] togglePlayAudio error:', error);
+        setIsPlaying(false);
+      }
     }
   };
 
