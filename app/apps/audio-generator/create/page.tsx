@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useAudioStore } from '@/lib/stores/audio-store';
+import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
+import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType } from '@/lib/audio/types';
 import AudioPlayer from '@/components/audio/AudioPlayer';
@@ -11,7 +13,7 @@ import { getApiKey } from '@/lib/api-key/storage';
 import { jobQueue } from '@/lib/queue';
 import { getAllAudio } from '@/lib/storage/indexed-db';
 import { generateAudioTags } from '@/lib/utils/tags';
-import { Play, Pause, Download } from 'lucide-react';
+import { Play, Pause, Download, Cloud } from 'lucide-react';
 
 interface StoredAudio {
   id: string;
@@ -28,6 +30,8 @@ interface StoredAudio {
 
 export default function AudioCreatePage() {
   const { error, currentAudio, setError } = useAudioStore();
+  const { isAuthenticated } = useGoogleDriveStore();
+  const uploadFile = useGoogleDriveUpload();
 
   // Form state
   const [type, setType] = useState<AudioType>('bgm');
@@ -42,6 +46,9 @@ export default function AudioCreatePage() {
   const [audioElements, setAudioElements] = useState<
     Map<string, HTMLAudioElement>
   >(new Map());
+
+  // Google Drive save state
+  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
 
   const preset = GAME_PRESETS[genre];
 
@@ -140,6 +147,58 @@ export default function AudioCreatePage() {
       `audio-${currentAudio.id}`,
       format
     );
+  };
+
+  // Google Drive 저장 핸들러
+  const handleSaveToGoogleDrive = async () => {
+    if (!currentAudio) return;
+    if (!isAuthenticated) {
+      setError('Google Drive에 저장하려면 먼저 로그인해주세요');
+      return;
+    }
+
+    setIsSavingToDrive(true);
+    try {
+      // ArrayBuffer를 Blob으로 변환
+      const audioBlob = new Blob([currentAudio.audioData], {
+        type: 'audio/wav',
+      });
+
+      // 파일명 생성
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, '-');
+      const filename = `audio-${timestamp}.wav`;
+
+      // 메타데이터
+      const metadata: Record<string, string> = {
+        prompt: currentAudio.metadata.prompt || '',
+        type: currentAudio.metadata.type || '',
+        genre: currentAudio.metadata.genre || '',
+        bpm: String(currentAudio.metadata.bpm || ''),
+        duration: String(currentAudio.metadata.duration || ''),
+      };
+
+      // Google Drive 업로드
+      const result = await uploadFile(audioBlob, filename, 'audio', metadata);
+
+      if (result) {
+        setError('');
+        // 성공 메시지
+        alert('✅ 오디오가 Google Drive에 저장되었습니다!');
+      } else {
+        setError('Google Drive 저장에 실패했습니다');
+      }
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Google Drive 저장 중 오류 발생';
+      setError(errorMessage);
+      // eslint-disable-next-line no-console
+      console.error('Google Drive save error:', err);
+    } finally {
+      setIsSavingToDrive(false);
+    }
   };
 
   // 관련 오디오 재생 토글
@@ -373,7 +432,7 @@ export default function AudioCreatePage() {
               </div>
             </div>
 
-            {/* Download Buttons */}
+            {/* Download & Save Buttons */}
             <div className="flex flex-wrap gap-3">
               <Button
                 onClick={() => handleDownload('wav')}
@@ -398,6 +457,25 @@ export default function AudioCreatePage() {
                 className="flex-1 min-w-[120px] bg-purple-600 hover:bg-purple-700"
               >
                 💾 OGG 다운로드
+              </Button>
+              <Button
+                onClick={handleSaveToGoogleDrive}
+                disabled={isSavingToDrive || !isAuthenticated}
+                variant="primary"
+                size="md"
+                className="flex-1 min-w-[120px] bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50"
+              >
+                {isSavingToDrive ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border border-white border-t-cyan-200 mr-2" />
+                    저장 중...
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="w-4 h-4 mr-1" />
+                    Google Drive에 저장
+                  </>
+                )}
               </Button>
             </div>
           </div>
