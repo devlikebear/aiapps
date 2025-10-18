@@ -620,6 +620,322 @@ export const BUILTIN_UI_SFX_PRESET: AudioPresetBuilderSchema = {
   updatedAt: new Date().toISOString(),
 };
 
+/**
+ * 환경음 SFX 프리셋
+ * 배경 환경음: 바람, 물, 자연음 등
+ */
+export const BUILTIN_ENVIRONMENT_SFX_PRESET: AudioPresetBuilderSchema = {
+  id: 'environment-sfx',
+  name: '환경음 (Environment)',
+  description: '자연스러운 배경 환경음 생성',
+  icon: '🌍',
+  type: 'sfx',
+  sfxCategory: 'environment',
+  groups: [
+    {
+      id: 'environment-type',
+      name: '환경음 유형',
+      icon: '🌫️',
+      order: 0,
+      fields: [
+        {
+          id: 'description',
+          label: '환경음 설명',
+          type: 'textarea',
+          value: '숲의 바람소리',
+          order: 0,
+          placeholder: '예: 부드러운 빗소리, 숲의 새 울음',
+          required: true,
+        },
+      ],
+    },
+    {
+      id: 'environment-mood',
+      name: '분위기',
+      icon: '🎨',
+      order: 1,
+      fields: [
+        {
+          id: 'mood',
+          label: '분위기 선택',
+          type: 'multiselect',
+          value: ['calm'],
+          order: 0,
+          options: ['calm', 'peaceful', 'mysterious', 'natural', 'immersive'],
+        },
+      ],
+    },
+    {
+      id: 'environment-technical',
+      name: '기술 설정',
+      icon: '⚙️',
+      order: 2,
+      fields: [
+        {
+          id: 'duration',
+          label: '지속시간 (초)',
+          type: 'range',
+          value: 3,
+          order: 0,
+          min: 1,
+          max: 10,
+          step: 0.5,
+        },
+        {
+          id: 'intensity',
+          label: '강도',
+          type: 'range',
+          value: 0.5,
+          order: 1,
+          min: 0,
+          max: 1,
+          step: 0.1,
+        },
+      ],
+    },
+  ],
+  isBuiltIn: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+/**
+ * 임팩트 SFX 프리셋
+ * 충돌, 폭발, 타격음 등 강렬한 사운드
+ */
+export const BUILTIN_IMPACT_SFX_PRESET: AudioPresetBuilderSchema = {
+  id: 'impact-sfx',
+  name: '임팩트 (Impact)',
+  description: '충돌과 폭발음 생성',
+  icon: '💥',
+  type: 'sfx',
+  sfxCategory: 'impact',
+  groups: [
+    {
+      id: 'impact-type',
+      name: '임팩트 유형',
+      icon: '🎯',
+      order: 0,
+      fields: [
+        {
+          id: 'description',
+          label: '임팩트 설명',
+          type: 'textarea',
+          value: '검 충돌 소리',
+          order: 0,
+          placeholder: '예: 폭발, 벽에 충돌, 무기 타격',
+          required: true,
+        },
+      ],
+    },
+    {
+      id: 'impact-character',
+      name: '특성',
+      icon: '⚡',
+      order: 1,
+      fields: [
+        {
+          id: 'mood',
+          label: '특성 선택',
+          type: 'multiselect',
+          value: ['sharp'],
+          order: 0,
+          options: ['sharp', 'dull', 'metallic', 'wooden', 'explosive'],
+        },
+      ],
+    },
+    {
+      id: 'impact-technical',
+      name: '기술 설정',
+      icon: '⚙️',
+      order: 2,
+      fields: [
+        {
+          id: 'duration',
+          label: '지속시간 (초)',
+          type: 'range',
+          value: 0.5,
+          order: 0,
+          min: 0.1,
+          max: 2,
+          step: 0.1,
+        },
+        {
+          id: 'intensity',
+          label: '강도',
+          type: 'range',
+          value: 0.8,
+          order: 1,
+          min: 0,
+          max: 1,
+          step: 0.1,
+        },
+      ],
+    },
+  ],
+  isBuiltIn: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+/**
+ * 마법 SFX 프리셋
+ * 마법 시전, 주문, 마법 이펙트음
+ */
+export const BUILTIN_MAGIC_SFX_PRESET: AudioPresetBuilderSchema = {
+  id: 'magic-sfx',
+  name: '마법 (Magic)',
+  description: '마법 시전 및 마법 이펙트음 생성',
+  icon: '✨',
+  type: 'sfx',
+  sfxCategory: 'magic',
+  groups: [
+    {
+      id: 'magic-type',
+      name: '마법 유형',
+      icon: '🪄',
+      order: 0,
+      fields: [
+        {
+          id: 'description',
+          label: '마법 설명',
+          type: 'textarea',
+          value: '신비로운 마법 주문',
+          order: 0,
+          placeholder: '예: 얼음 마법, 불 주문, 치유 마법',
+          required: true,
+        },
+      ],
+    },
+    {
+      id: 'magic-character',
+      name: '마법 특성',
+      icon: '🎆',
+      order: 1,
+      fields: [
+        {
+          id: 'mood',
+          label: '마법 유형',
+          type: 'multiselect',
+          value: ['mystical'],
+          order: 0,
+          options: ['mystical', 'electric', 'fire', 'ice', 'healing', 'dark'],
+        },
+      ],
+    },
+    {
+      id: 'magic-technical',
+      name: '기술 설정',
+      icon: '⚙️',
+      order: 2,
+      fields: [
+        {
+          id: 'duration',
+          label: '지속시간 (초)',
+          type: 'range',
+          value: 1,
+          order: 0,
+          min: 0.3,
+          max: 3,
+          step: 0.1,
+        },
+        {
+          id: 'intensity',
+          label: '강도',
+          type: 'range',
+          value: 0.7,
+          order: 1,
+          min: 0,
+          max: 1,
+          step: 0.1,
+        },
+      ],
+    },
+  ],
+  isBuiltIn: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+/**
+ * 음성 SFX 프리셋
+ * 목소리, 외침, 음성 이펙트
+ */
+export const BUILTIN_VOICE_SFX_PRESET: AudioPresetBuilderSchema = {
+  id: 'voice-sfx',
+  name: '음성 (Voice)',
+  description: '음성 및 음성 이펙트 생성',
+  icon: '🎤',
+  type: 'sfx',
+  sfxCategory: 'voice',
+  groups: [
+    {
+      id: 'voice-type',
+      name: '음성 유형',
+      icon: '🗣️',
+      order: 0,
+      fields: [
+        {
+          id: 'description',
+          label: '음성 설명',
+          type: 'textarea',
+          value: '캐릭터 피해 효과음',
+          order: 0,
+          placeholder: '예: 고통스러운 외침, 짧은 웃음, 인사말',
+          required: true,
+        },
+      ],
+    },
+    {
+      id: 'voice-mood',
+      name: '음성 특성',
+      icon: '😊',
+      order: 1,
+      fields: [
+        {
+          id: 'mood',
+          label: '특성 선택',
+          type: 'multiselect',
+          value: ['neutral'],
+          order: 0,
+          options: ['pain', 'happy', 'sad', 'surprised', 'angry', 'neutral'],
+        },
+      ],
+    },
+    {
+      id: 'voice-technical',
+      name: '기술 설정',
+      icon: '⚙️',
+      order: 2,
+      fields: [
+        {
+          id: 'duration',
+          label: '지속시간 (초)',
+          type: 'range',
+          value: 0.5,
+          order: 0,
+          min: 0.2,
+          max: 2,
+          step: 0.1,
+        },
+        {
+          id: 'intensity',
+          label: '강도',
+          type: 'range',
+          value: 0.6,
+          order: 1,
+          min: 0,
+          max: 1,
+          step: 0.1,
+        },
+      ],
+    },
+  ],
+  isBuiltIn: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
 // ============================================
 // 모든 빌트인 프리셋 배열
 // ============================================
@@ -633,6 +949,10 @@ export const ALL_BUILTIN_AUDIO_PRESETS: AudioPresetBuilderSchema[] = [
   BUILTIN_RETRO_PRESET,
   // SFX Presets
   BUILTIN_UI_SFX_PRESET,
+  BUILTIN_ENVIRONMENT_SFX_PRESET,
+  BUILTIN_IMPACT_SFX_PRESET,
+  BUILTIN_MAGIC_SFX_PRESET,
+  BUILTIN_VOICE_SFX_PRESET,
 ];
 
 /**
