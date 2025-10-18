@@ -384,6 +384,17 @@ export default function LibraryContent() {
     setShareModalOpen(true);
   };
 
+  const handleShareImage = (image: ImageWithBlob) => {
+    const imageMeta = image.metadata as Record<string, unknown>;
+    setShareData({
+      id: image.id,
+      title: image.metadata.prompt,
+      description: `${imageMeta.technique || 'AI Generated'} - ${image.metadata.prompt.slice(0, 50)}...`,
+      mediaType: 'image',
+    });
+    setShareModalOpen(true);
+  };
+
   const handleDeleteAudio = async (id: string) => {
     if (confirm('이 오디오를 삭제하시겠습니까?')) {
       await deleteAudio(id);
@@ -1298,6 +1309,17 @@ export default function LibraryContent() {
                                 >
                                   <Download className="w-3 h-3" />
                                   PNG
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShareImage(image);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 rounded-lg text-xs font-medium text-pink-400 transition-colors"
+                                  title="공유"
+                                >
+                                  <Share2 className="w-3 h-3" />
+                                  공유
                                 </button>
                                 <button
                                   onClick={(e) => {
