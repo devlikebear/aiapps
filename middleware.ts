@@ -39,11 +39,11 @@ function setSecurityHeaders(response: NextResponse) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js는 unsafe-eval 필요
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com", // Google OAuth 스크립트 허용
       "style-src 'self' 'unsafe-inline'", // Tailwind는 unsafe-inline 필요
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://generativelanguage.googleapis.com",
+      "connect-src 'self' https://generativelanguage.googleapis.com https://accounts.google.com https://www.googleapis.com", // Google OAuth 연결 허용
       "media-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
