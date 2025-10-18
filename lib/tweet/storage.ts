@@ -53,6 +53,8 @@ export async function saveTweet(tweet: StoredTweet): Promise<string> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result as string);
+
+    transaction.onerror = () => reject(transaction.error);
   });
 }
 

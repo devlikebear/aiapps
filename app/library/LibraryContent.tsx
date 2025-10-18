@@ -29,6 +29,8 @@ import {
   Clock,
   Cloud,
   Share2,
+  Sparkles,
+  Copy,
 } from 'lucide-react';
 import { Button } from '@aiapps/ui';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
@@ -57,8 +59,10 @@ import {
   type SharePermissionType,
 } from '@/lib/google-drive/client';
 import type { Job } from '@/lib/queue';
+import { getAllTweets, deleteTweet } from '@/lib/tweet/storage';
+import type { StoredTweet } from '@/lib/tweet/types';
 
-type MediaType = 'all' | 'audio' | 'image';
+type MediaType = 'all' | 'audio' | 'image' | 'tweet';
 
 // Audio with blobUrl extension
 interface AudioWithBlob extends StoredAudio {
@@ -117,6 +121,7 @@ export default function LibraryContent() {
   const [activeTab, setActiveTab] = useState<MediaType>(urlTab || 'all');
   const [audioList, setAudioList] = useState<AudioWithBlob[]>([]);
   const [imageList, setImageList] = useState<ImageWithBlob[]>([]);
+  const [tweetList, setTweetList] = useState<StoredTweet[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -225,9 +230,10 @@ export default function LibraryContent() {
   const loadMedia = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [audio, images] = await Promise.all([
+      const [audio, images, tweets] = await Promise.all([
         getAllAudio(),
         getAllImages(),
+        getAllTweets(),
       ]);
 
       // Base64 데이터를 Blob URL로 변환
@@ -243,6 +249,7 @@ export default function LibraryContent() {
 
       setAudioList(audioWithBlobs);
       setImageList(imagesWithBlobs);
+      setTweetList(tweets);
 
       // 모든 태그 수집 (중복 제거)
       const allTags = new Set<string>();
@@ -637,6 +644,22 @@ export default function LibraryContent() {
     }
   };
 
+  const handleDeleteTweet = async (id: string) => {
+    if (confirm('이 트윗을 삭제하시겠습니까?')) {
+      await deleteTweet(id);
+      setTweetList((prev) => prev.filter((t) => t.id !== id));
+    }
+  };
+
+  const handleCopyTweet = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('✓ 트윗이 복사되었습니다');
+    } catch {
+      alert('❌ 복사에 실패했습니다');
+    }
+  };
+
   // Google Drive save handlers
   const handleSaveAudioToGoogleDrive = async (audio: AudioWithBlob) => {
     if (!isAuthenticated) {
@@ -970,6 +993,33 @@ export default function LibraryContent() {
   const filteredAudio = filterAndSortMedia(audioList);
   const filteredImages = filterAndSortMedia(imageList);
 
+  // Filter tweets based on search query
+  const filteredTweets = tweetList.filter((tweet) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      tweet.tweet.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tweet.metadata.tone.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Sort tweets
+  const sortedTweets = [...filteredTweets].sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        return (
+          new Date(b.metadata.createdAt).getTime() -
+          new Date(a.metadata.createdAt).getTime()
+        );
+      case 'oldest':
+        return (
+          new Date(a.metadata.createdAt).getTime() -
+          new Date(b.metadata.createdAt).getTime()
+        );
+      default:
+        return 0;
+    }
+  });
+
   // Paginate images
   const totalImagePages = Math.ceil(filteredImages.length / itemsPerPage);
   const paginatedImages = filteredImages.slice(
@@ -980,6 +1030,7 @@ export default function LibraryContent() {
   // Stats
   const totalAudio = audioList.length;
   const totalImages = imageList.length;
+  const totalTweets = tweetList.length;
   const totalStorage =
     audioList.reduce((sum, a) => sum + (a.data?.length || 0), 0) +
     imageList.reduce((sum, img) => sum + (img.data?.length || 0), 0);
@@ -998,7 +1049,7 @@ export default function LibraryContent() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
             <div className="flex items-center gap-3">
               <Music className="w-8 h-8 text-blue-400" />
@@ -1019,6 +1070,18 @@ export default function LibraryContent() {
                   {totalImages}
                 </div>
                 <div className="text-sm text-gray-400">이미지</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-8 h-8 text-cyan-400" />
+              <div>
+                <div className="text-2xl font-bold text-white">
+                  {totalTweets}
+                </div>
+                <div className="text-sm text-gray-400">트윗</div>
               </div>
             </div>
           </div>
@@ -1076,6 +1139,19 @@ export default function LibraryContent() {
               >
                 <ImageIcon className="w-4 h-4" />
                 이미지 ({totalImages})
+              </Button>
+              <Button
+                onClick={() => setActiveTab('tweet')}
+                variant={activeTab === 'tweet' ? 'primary' : 'secondary'}
+                size="md"
+                className={
+                  activeTab === 'tweet'
+                    ? 'bg-cyan-600 hover:bg-cyan-700 flex items-center gap-2'
+                    : 'flex items-center gap-2'
+                }
+              >
+                <Sparkles className="w-4 h-4" />
+                트윗 ({totalTweets})
               </Button>
             </div>
 
@@ -1659,18 +1735,98 @@ export default function LibraryContent() {
                 </div>
               )}
 
+            {/* Tweets Section */}
+            {(activeTab === 'all' || activeTab === 'tweet') &&
+              sortedTweets.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
+                    <Sparkles className="w-6 h-6 text-cyan-400" />
+                    트윗 ({sortedTweets.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sortedTweets.map((tweet) => (
+                      <div
+                        key={tweet.id}
+                        className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 hover:border-cyan-500 transition-all flex flex-col"
+                      >
+                        {/* 트윗 내용 */}
+                        <div className="flex-1 mb-3">
+                          <p className="text-white text-sm leading-relaxed mb-2">
+                            {tweet.tweet}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {tweet.tweet.length}/
+                            {tweet.metadata.length === 'short'
+                              ? '140'
+                              : tweet.metadata.length === 'medium'
+                                ? '200'
+                                : '280'}
+                            자
+                          </p>
+                        </div>
+
+                        {/* 메타데이터 */}
+                        <div className="mb-3 pt-3 border-t border-gray-700 space-y-1 text-xs text-gray-400">
+                          <div>
+                            <span className="text-gray-500">톤:</span>{' '}
+                            <span className="text-gray-300">
+                              {tweet.metadata.tone === 'casual'
+                                ? '캐주얼'
+                                : tweet.metadata.tone === 'professional'
+                                  ? '비즈니스'
+                                  : tweet.metadata.tone === 'humorous'
+                                    ? '유머'
+                                    : '영감'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">생성:</span>{' '}
+                            <span className="text-gray-300">
+                              {new Date(
+                                tweet.metadata.createdAt
+                              ).toLocaleDateString('ko-KR')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 액션 버튼 */}
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-700">
+                          <button
+                            onClick={() => handleCopyTweet(tweet.tweet)}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 rounded-lg text-xs font-medium text-cyan-400 transition-colors"
+                          >
+                            <Copy className="w-3 h-3" />
+                            복사
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTweet(tweet.id)}
+                            className="flex items-center justify-center gap-1 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs font-medium text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             {/* Empty State */}
             {((activeTab === 'all' &&
               filteredAudio.length === 0 &&
-              filteredImages.length === 0) ||
+              filteredImages.length === 0 &&
+              sortedTweets.length === 0) ||
               (activeTab === 'audio' && filteredAudio.length === 0) ||
-              (activeTab === 'image' && filteredImages.length === 0)) && (
+              (activeTab === 'image' && filteredImages.length === 0) ||
+              (activeTab === 'tweet' && sortedTweets.length === 0)) && (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="text-gray-500 mb-4">
                   {activeTab === 'audio' ? (
                     <Music className="w-16 h-16" />
                   ) : activeTab === 'image' ? (
                     <ImageIcon className="w-16 h-16" />
+                  ) : activeTab === 'tweet' ? (
+                    <Sparkles className="w-16 h-16" />
                   ) : (
                     <Filter className="w-16 h-16" />
                   )}
@@ -1685,7 +1841,9 @@ export default function LibraryContent() {
                       ? '오디오 생성기에서 새로운 음악을 만들어보세요'
                       : activeTab === 'image'
                         ? '아트 생성기에서 이미지를 생성해보세요'
-                        : '생성기를 사용하여 새로운 미디어를 만들어보세요'}
+                        : activeTab === 'tweet'
+                          ? '트윗 생성기에서 새로운 트윗을 만들어보세요'
+                          : '생성기를 사용하여 새로운 미디어를 만들어보세요'}
                 </p>
               </div>
             )}

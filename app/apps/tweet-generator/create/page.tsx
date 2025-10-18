@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import type { TweetGenerateRequest, TweetMetadata } from '@/lib/tweet/types';
 import { TONE_DESCRIPTIONS, LENGTH_DESCRIPTIONS } from '@/lib/tweet/types';
+import { saveTweet } from '@/lib/tweet/storage';
+import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
+import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 
 interface GeneratedTweet {
   tweet: string;
@@ -34,6 +37,8 @@ const LENGTH_OPTIONS = [
 
 export default function TweetGeneratePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isAuthenticated } = useGoogleDriveStore();
+  const uploadFile = useGoogleDriveUpload();
 
   // 폼 상태
   const [prompt, setPrompt] = useState('');
@@ -51,6 +56,7 @@ export default function TweetGeneratePage() {
   );
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
 
   // 자동 높이 조정
   useEffect(() => {
@@ -116,18 +122,50 @@ export default function TweetGeneratePage() {
     if (!generatedTweet) return;
 
     try {
-      const response = await fetch('/api/tweet/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tweet: generatedTweet.tweet,
-          metadata: generatedTweet.metadata,
-        }),
-      });
-
-      if (!response.ok) throw new Error('저장 실패');
-
       setError('');
+
+      // 1. IndexedDB에 저장
+      const storedTweet = {
+        id: generatedTweet.metadata.id,
+        tweet: generatedTweet.tweet,
+        metadata: generatedTweet.metadata,
+        createdAt: generatedTweet.metadata.createdAt,
+      };
+
+      await saveTweet(storedTweet);
+
+      // 2. Google Drive에 저장 (인증된 경우)
+      if (isAuthenticated) {
+        setIsSavingToDrive(true);
+        try {
+          const tweetContent = `${generatedTweet.tweet}\n\n---\n톤: ${generatedTweet.metadata.tone}\n길이: ${generatedTweet.metadata.length}\n생성 날짜: ${new Date(generatedTweet.metadata.createdAt).toLocaleString('ko-KR')}`;
+
+          const blob = new Blob([tweetContent], { type: 'text/plain' });
+          const timestamp = new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replace(/:/g, '-');
+          const filename = `tweet-${timestamp}.txt`;
+
+          const metadata: Record<string, string> = {
+            tone: generatedTweet.metadata.tone || '',
+            length: generatedTweet.metadata.length || '',
+          };
+
+          const result = await uploadFile(blob, filename, 'audio', metadata);
+          if (result) {
+            // 메타데이터에 Google Drive ID 업데이트
+            storedTweet.metadata.googleDriveId = result.id;
+          }
+        } catch (driveError) {
+          // eslint-disable-next-line no-console
+          console.error('Google Drive 저장 실패:', driveError);
+          // Google Drive 저장 실패해도 IndexedDB에는 저장되었으므로 계속 진행
+        } finally {
+          setIsSavingToDrive(false);
+        }
+      }
+
       alert('✓ 트윗이 라이브러리에 저장되었습니다');
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다');
@@ -338,10 +376,20 @@ export default function TweetGeneratePage() {
 
                     <button
                       onClick={handleSave}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-500/20 text-purple-300 border border-purple-500/50 hover:bg-purple-500/30 transition-all"
+                      disabled={isSavingToDrive}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-500/20 text-purple-300 border border-purple-500/50 hover:bg-purple-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                     >
-                      <Save className="w-4 h-4" />
-                      저장
+                      {isSavingToDrive ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
+                          저장 중...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          저장
+                        </>
+                      )}
                     </button>
 
                     <button
