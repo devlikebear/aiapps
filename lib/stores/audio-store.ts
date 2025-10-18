@@ -103,38 +103,50 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
   setProgress: (progress) => set({ progress }),
 
   setGeneratedAudio: (audioData, metadata) => {
-    const blob = new Blob([audioData], { type: 'audio/wav' });
-    const audioUrl = URL.createObjectURL(blob);
+    try {
+      const blob = new Blob([audioData], { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(blob);
 
-    const generatedAudio: GeneratedAudio = {
-      id: metadata.id,
-      audioData,
-      audioUrl,
-      metadata,
-      createdAt: new Date(),
-    };
+      const generatedAudio: GeneratedAudio = {
+        id: metadata.id,
+        audioData,
+        audioUrl,
+        metadata,
+        createdAt: new Date(),
+      };
 
-    // IndexedDB에 저장 (비동기이지만 await하지 않음)
-    const arrayBuffer = audioData;
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    saveAudio({
-      id: metadata.id,
-      blobUrl: audioUrl,
-      data: base64,
-      metadata,
-    }).catch((err) => {
+      // IndexedDB에 저장 (비동기이지만 await하지 않음)
+      // ArrayBuffer → Base64 변환 (브라우저 환경)
+      const bytes = new Uint8Array(audioData);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+
+      saveAudio({
+        id: metadata.id,
+        blobUrl: audioUrl,
+        data: base64,
+        metadata,
+      }).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to save audio to IndexedDB:', err);
+      });
+
+      set({
+        currentAudio: generatedAudio,
+        playerState: {
+          ...get().playerState,
+          duration: metadata.duration,
+          currentTime: 0,
+        },
+      });
+    } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Failed to save audio to IndexedDB:', err);
-    });
-
-    set({
-      currentAudio: generatedAudio,
-      playerState: {
-        ...get().playerState,
-        duration: metadata.duration,
-        currentTime: 0,
-      },
-    });
+      console.error('[AudioStore] setGeneratedAudio error:', err);
+      set({ error: 'Audio data processing failed' });
+    }
   },
 
   setError: (error) => set({ error, isGenerating: false }),

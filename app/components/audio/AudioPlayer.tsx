@@ -28,37 +28,72 @@ function AudioPlayer() {
     const audio = audioRef.current;
     if (!audio || !currentAudio) return;
 
-    audio.src = currentAudio.audioUrl;
-    audio.volume = isMuted ? 0 : volume;
-    audio.loop = isLooping;
-
-    // 메타데이터 로드
-    const handleLoadedMetadata = () => {
-      setPlayerState({ duration: audio.duration });
-    };
-
-    // 재생 시간 업데이트
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    // 재생 종료
-    const handleEnded = () => {
-      if (!isLooping) {
-        pause();
-        setCurrentTime(0);
+    try {
+      // audioUrl이 유효한 Blob URL인지 확인
+      if (typeof currentAudio.audioUrl !== 'string') {
+        // eslint-disable-next-line no-console
+        console.error(
+          '[AudioPlayer] Invalid audioUrl type:',
+          typeof currentAudio.audioUrl
+        );
+        return;
       }
-    };
 
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
+      if (!currentAudio.audioUrl.startsWith('blob:')) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[AudioPlayer] audioUrl is not a Blob URL:',
+          currentAudio.audioUrl
+        );
+      }
 
-    return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
-    };
+      audio.src = currentAudio.audioUrl;
+      audio.volume = isMuted ? 0 : volume;
+      audio.loop = isLooping;
+
+      // 메타데이터 로드
+      const handleLoadedMetadata = () => {
+        setPlayerState({ duration: audio.duration });
+      };
+
+      // 재생 시간 업데이트
+      const handleTimeUpdate = () => {
+        setCurrentTime(audio.currentTime);
+      };
+
+      // 재생 종료
+      const handleEnded = () => {
+        if (!isLooping) {
+          pause();
+          setCurrentTime(0);
+        }
+      };
+
+      // 오류 처리
+      const handleError = () => {
+        // eslint-disable-next-line no-console
+        console.error('[AudioPlayer] Audio element error:', {
+          error: audio.error?.message,
+          code: audio.error?.code,
+          src: audio.src,
+        });
+      };
+
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
+
+      return () => {
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.removeEventListener('timeupdate', handleTimeUpdate);
+        audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('error', handleError);
+      };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[AudioPlayer] Setup error:', err);
+    }
   }, [
     currentAudio,
     isLooping,
