@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Check,
   FolderOpen,
+  Lock,
+  Link2,
 } from 'lucide-react';
 import {
   generateTwitterShareUrl,
@@ -80,6 +82,33 @@ export default function ShareModal({ isOpen, onClose, data }: ShareModalProps) {
 
         {/* Content */}
         <div className="p-6 space-y-4">
+          {/* 공유 상태 배지 */}
+          {data.isPubliclyShared !== undefined && (
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                data.isPubliclyShared
+                  ? 'bg-sky-500/20 border border-sky-500/50'
+                  : 'bg-amber-500/20 border border-amber-500/50'
+              }`}
+            >
+              {data.isPubliclyShared ? (
+                <>
+                  <Link2 className="w-4 h-4 text-sky-400" />
+                  <span className="text-sm font-medium text-sky-300">
+                    🔗 공개 공유 - 링크를 가진 모든 사람이 접근 가능
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-medium text-amber-300">
+                    🔒 비공개 저장 - Google Drive에만 저장됨
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
           {/* 미디어 정보 */}
           <div className="bg-gray-800 rounded-lg p-4">
             <p className="text-sm text-gray-400 mb-1">제목</p>

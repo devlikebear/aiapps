@@ -291,43 +291,70 @@ export function getGoogleDriveFileUrl(
 }
 
 /**
- * Google Drive 파일 공유 링크 생성
+ * 공유 권한 옵션
+ */
+export type SharePermissionType = 'public' | 'private';
+
+/**
+ * Google Drive 파일 공유 설정
+ * @param accessToken - Google Drive API 액세스 토큰
+ * @param fileId - 파일 ID
+ * @param permissionType - 'public' (링크를 가진 모든 사람) 또는 'private' (접근 제한)
+ * @returns 공유 링크 또는 파일 ID
+ */
+export async function setGoogleDriveFilePermission(
+  accessToken: string,
+  fileId: string,
+  permissionType: SharePermissionType
+): Promise<string> {
+  try {
+    if (permissionType === 'public') {
+      // 파일을 공개로 공유하는 권한 생성 (링크를 가진 모든 사람)
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            role: 'reader',
+            type: 'anyone',
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          (errorData as Record<string, unknown>).error || response.statusText;
+        throw new Error(
+          `Failed to set public permission: ${response.status} ${JSON.stringify(errorMessage)}`
+        );
+      }
+
+      // 공유 링크 반환
+      return `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+    } else {
+      // 'private' - 접근 제한 (기본값으로 유지)
+      // Google Drive에서 기본적으로 새 파일은 개인 접근만 가능
+      return `https://drive.google.com/file/d/${fileId}/view`;
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error setting Google Drive file permission:', error);
+    throw error;
+  }
+}
+
+/**
+ * Google Drive 파일 공유 링크 생성 (하위 호환성 유지)
+ * @deprecated setGoogleDriveFilePermission() 함수 사용 권장
  */
 export async function shareGoogleDriveFile(
   accessToken: string,
   fileId: string
 ): Promise<string> {
-  try {
-    // 파일을 공개로 공유하는 권한 생성
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          role: 'reader',
-          type: 'anyone',
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage =
-        (errorData as Record<string, unknown>).error || response.statusText;
-      throw new Error(
-        `Failed to share file: ${response.status} ${JSON.stringify(errorMessage)}`
-      );
-    }
-
-    // 공유 링크 반환
-    return `https://drive.google.com/file/d/${fileId}/view`;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error sharing file on Google Drive:', error);
-    throw error;
-  }
+  return setGoogleDriveFilePermission(accessToken, fileId, 'public');
 }

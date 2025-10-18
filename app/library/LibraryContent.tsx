@@ -50,7 +50,12 @@ import {
 import { useJobQueueStore } from '@/lib/stores/job-queue-store';
 import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
 import ShareModal from '@/app/components/ShareModal';
+import { ShareOptionsDialog } from '@/app/components/ShareOptionsDialog';
 import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
+import {
+  setGoogleDriveFilePermission,
+  type SharePermissionType,
+} from '@/lib/google-drive/client';
 import type { Job } from '@/lib/queue';
 
 type MediaType = 'all' | 'audio' | 'image';
@@ -196,7 +201,15 @@ export default function LibraryContent() {
     useState<DuplicateStrategy>('skip');
 
   // Google Drive save state
-  const { isAuthenticated } = useGoogleDriveStore();
+  const { isAuthenticated, accessToken } = useGoogleDriveStore();
+
+  // Share options dialog state
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [pendingShareAudio, setPendingShareAudio] =
+    useState<StoredAudio | null>(null);
+  const [pendingShareImage, setPendingShareImage] =
+    useState<ImageWithBlob | null>(null);
+  const [isSettingPermission, setIsSettingPermission] = useState(false);
   const uploadFile = useGoogleDriveUpload();
   const [savingToGoogleDrive, setSavingToGoogleDrive] = useState<string | null>(
     null
@@ -431,15 +444,51 @@ export default function LibraryContent() {
       }
     }
 
-    // 3. 공유 데이터 설정
-    setShareData({
-      id: audio.id,
-      title: audio.metadata.prompt,
-      description: `${audio.metadata.type === 'bgm' ? 'BGM' : 'SFX'} - ${audio.metadata.genre}`,
-      mediaType: 'audio',
-      googleDriveFileId: driveFileId,
-    } as Parameters<typeof setShareData>[0]);
-    setShareModalOpen(true);
+    // 3. 공유 옵션 선택 다이얼로그 표시
+    setPendingShareAudio(audio);
+    setShowShareOptions(true);
+  };
+
+  const handleShareAudioWithPermission = async (
+    permissionType: SharePermissionType
+  ) => {
+    if (!pendingShareAudio) return;
+
+    try {
+      setIsSettingPermission(true);
+
+      // Google Drive ID 조회
+      const audioMeta = pendingShareAudio.metadata as Record<string, unknown>;
+      const driveFileId = audioMeta.googleDriveId as string | undefined;
+
+      if (!driveFileId) {
+        alert('파일 ID를 찾을 수 없습니다');
+        return;
+      }
+
+      // 공개 공유인 경우 권한 설정
+      if (permissionType === 'public' && accessToken) {
+        await setGoogleDriveFilePermission(accessToken, driveFileId, 'public');
+      }
+
+      // 공유 데이터 설정
+      setShareData({
+        id: pendingShareAudio.id,
+        title: pendingShareAudio.metadata.prompt,
+        description: `${pendingShareAudio.metadata.type === 'bgm' ? 'BGM' : 'SFX'} - ${audioMeta.genre}`,
+        mediaType: 'audio',
+        googleDriveFileId: driveFileId,
+        isPubliclyShared: permissionType === 'public',
+      } as Parameters<typeof setShareData>[0]);
+      setShareModalOpen(true);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to set permission:', error);
+      alert('❌ 공유 권한 설정에 실패했습니다');
+    } finally {
+      setIsSettingPermission(false);
+      setPendingShareAudio(null);
+    }
   };
 
   const handleShareImage = async (image: ImageWithBlob) => {
@@ -497,15 +546,51 @@ export default function LibraryContent() {
       }
     }
 
-    // 3. 공유 데이터 설정
-    setShareData({
-      id: image.id,
-      title: image.metadata.prompt,
-      description: `${imageMeta.technique || 'AI Generated'} - ${image.metadata.prompt.slice(0, 50)}...`,
-      mediaType: 'image',
-      googleDriveFileId: driveFileId,
-    } as Parameters<typeof setShareData>[0]);
-    setShareModalOpen(true);
+    // 3. 공유 옵션 선택 다이얼로그 표시
+    setPendingShareImage(image);
+    setShowShareOptions(true);
+  };
+
+  const handleShareImageWithPermission = async (
+    permissionType: SharePermissionType
+  ) => {
+    if (!pendingShareImage) return;
+
+    try {
+      setIsSettingPermission(true);
+
+      // Google Drive ID 조회
+      const imageMeta = pendingShareImage.metadata as Record<string, unknown>;
+      const driveFileId = imageMeta.googleDriveId as string | undefined;
+
+      if (!driveFileId) {
+        alert('파일 ID를 찾을 수 없습니다');
+        return;
+      }
+
+      // 공개 공유인 경우 권한 설정
+      if (permissionType === 'public' && accessToken) {
+        await setGoogleDriveFilePermission(accessToken, driveFileId, 'public');
+      }
+
+      // 공유 데이터 설정
+      setShareData({
+        id: pendingShareImage.id,
+        title: pendingShareImage.metadata.prompt,
+        description: `${imageMeta.technique || 'AI Generated'} - ${pendingShareImage.metadata.prompt.slice(0, 50)}...`,
+        mediaType: 'image',
+        googleDriveFileId: driveFileId,
+        isPubliclyShared: permissionType === 'public',
+      } as Parameters<typeof setShareData>[0]);
+      setShareModalOpen(true);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to set permission:', error);
+      alert('❌ 공유 권한 설정에 실패했습니다');
+    } finally {
+      setIsSettingPermission(false);
+      setPendingShareImage(null);
+    }
   };
 
   const handleDeleteAudio = async (id: string) => {
@@ -1888,6 +1973,24 @@ export default function LibraryContent() {
           </div>
         </div>
       )}
+
+      {/* Share Options Dialog */}
+      <ShareOptionsDialog
+        isOpen={showShareOptions}
+        onClose={() => {
+          setShowShareOptions(false);
+          setPendingShareAudio(null);
+          setPendingShareImage(null);
+        }}
+        onSelectOption={(option) => {
+          if (pendingShareAudio) {
+            handleShareAudioWithPermission(option);
+          } else if (pendingShareImage) {
+            handleShareImageWithPermission(option);
+          }
+        }}
+        isLoading={isSettingPermission}
+      />
 
       {/* Share Modal */}
       {shareData && (

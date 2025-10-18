@@ -11,6 +11,7 @@ export interface ShareData {
   url?: string; // 공유 링크 (향후 추가될 예정)
   googleDriveFileId?: string; // Google Drive 파일 ID
   googleDriveWebViewLink?: string; // Google Drive 공개 링크
+  isPubliclyShared?: boolean; // Google Drive에서 공개로 공유되었는지 여부
 }
 
 /**
