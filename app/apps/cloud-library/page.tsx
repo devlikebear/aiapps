@@ -42,7 +42,8 @@ export default function CloudLibraryPage() {
     isLoading,
     error,
   } = useGoogleDriveStore();
-  const { loadAudioFiles, loadImageFiles } = useGoogleDriveList();
+  const { loadAudioFiles, loadImageFiles, loadTweetFiles } =
+    useGoogleDriveList();
   const deleteFile = useGoogleDriveDelete();
 
   // UI 상태
@@ -58,7 +59,8 @@ export default function CloudLibraryPage() {
     if (!isAuthenticated) return;
     loadAudioFiles();
     loadImageFiles();
-  }, [isAuthenticated, loadAudioFiles, loadImageFiles]);
+    loadTweetFiles();
+  }, [isAuthenticated, loadAudioFiles, loadImageFiles, loadTweetFiles]);
 
   // 통합 파일 목록
   const allFiles: EnhancedFile[] = [
@@ -126,9 +128,7 @@ export default function CloudLibraryPage() {
     setIsDeleting(fileId);
     const file = allFiles.find((f) => f.id === fileId);
     if (file) {
-      // tweet 타입은 'audio'로 처리 (향후 지원 예정)
-      const typeForDelete = file.type === 'tweet' ? 'audio' : file.type;
-      const success = await deleteFile(fileId, typeForDelete);
+      const success = await deleteFile(fileId, file.type);
       if (!success) {
         // 에러는 스토어에서 처리됨
       }

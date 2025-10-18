@@ -120,8 +120,10 @@ export function useGoogleDriveUpload() {
     accessToken,
     audioFolderId,
     imagesFolderId,
+    tweetsFolderId,
     addAudioFile,
     addImageFile,
+    addTweetFile,
     setError,
   } = useGoogleDriveStore();
 
@@ -129,7 +131,7 @@ export function useGoogleDriveUpload() {
     async (
       file: Blob,
       filename: string,
-      type: 'audio' | 'image',
+      type: 'audio' | 'image' | 'tweet',
       metadata?: Record<string, string>
     ) => {
       if (!accessToken) {
@@ -137,7 +139,15 @@ export function useGoogleDriveUpload() {
         return null;
       }
 
-      const folderId = type === 'audio' ? audioFolderId : imagesFolderId;
+      let folderId: string | null = null;
+      if (type === 'audio') {
+        folderId = audioFolderId;
+      } else if (type === 'image') {
+        folderId = imagesFolderId;
+      } else {
+        folderId = tweetsFolderId;
+      }
+
       if (!folderId) {
         setError('Folder not initialized');
         return null;
@@ -155,8 +165,10 @@ export function useGoogleDriveUpload() {
         // 파일 목록에 추가
         if (type === 'audio') {
           addAudioFile(uploadedFile);
-        } else {
+        } else if (type === 'image') {
           addImageFile(uploadedFile);
+        } else {
+          addTweetFile(uploadedFile);
         }
 
         setError(null);
@@ -174,8 +186,10 @@ export function useGoogleDriveUpload() {
       accessToken,
       audioFolderId,
       imagesFolderId,
+      tweetsFolderId,
       addAudioFile,
       addImageFile,
+      addTweetFile,
       setError,
     ]
   );
@@ -191,8 +205,10 @@ export function useGoogleDriveList() {
     accessToken,
     audioFolderId,
     imagesFolderId,
+    tweetsFolderId,
     setAudioFiles,
     setImageFiles,
+    setTweetFiles,
     setError,
   } = useGoogleDriveStore();
 
@@ -254,18 +270,52 @@ export function useGoogleDriveList() {
     [accessToken, imagesFolderId, setImageFiles, setError]
   );
 
-  return { loadAudioFiles, loadImageFiles };
+  const loadTweetFiles = useCallback(
+    async (pageSize: number = 20, pageToken?: string) => {
+      if (!accessToken || !tweetsFolderId) {
+        return null;
+      }
+
+      try {
+        const result = await listFilesFromGoogleDrive(
+          accessToken,
+          tweetsFolderId,
+          pageSize,
+          pageToken
+        );
+
+        setTweetFiles(result.files, pageSize);
+        setError(null);
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to load files';
+        setError(message);
+        // eslint-disable-next-line no-console
+        console.error('List tweet files error:', error);
+        return null;
+      }
+    },
+    [accessToken, tweetsFolderId, setTweetFiles, setError]
+  );
+
+  return { loadAudioFiles, loadImageFiles, loadTweetFiles };
 }
 
 /**
  * Google Drive 파일 삭제 Hook
  */
 export function useGoogleDriveDelete() {
-  const { accessToken, removeAudioFile, removeImageFile, setError } =
-    useGoogleDriveStore();
+  const {
+    accessToken,
+    removeAudioFile,
+    removeImageFile,
+    removeTweetFile,
+    setError,
+  } = useGoogleDriveStore();
 
   const deleteFile = useCallback(
-    async (fileId: string, type: 'audio' | 'image') => {
+    async (fileId: string, type: 'audio' | 'image' | 'tweet') => {
       if (!accessToken) {
         setError('Not authenticated');
         return false;
@@ -277,8 +327,10 @@ export function useGoogleDriveDelete() {
         // 파일 목록에서 제거
         if (type === 'audio') {
           removeAudioFile(fileId);
-        } else {
+        } else if (type === 'image') {
           removeImageFile(fileId);
+        } else {
+          removeTweetFile(fileId);
         }
 
         setError(null);
@@ -292,7 +344,7 @@ export function useGoogleDriveDelete() {
         return false;
       }
     },
-    [accessToken, removeAudioFile, removeImageFile, setError]
+    [accessToken, removeAudioFile, removeImageFile, removeTweetFile, setError]
   );
 
   return deleteFile;
