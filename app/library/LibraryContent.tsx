@@ -28,6 +28,7 @@ import {
   Loader2,
   Clock,
   Cloud,
+  Share2,
 } from 'lucide-react';
 import { Button } from '@aiapps/ui';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
@@ -48,6 +49,7 @@ import {
 } from '@/lib/utils/gallery-import';
 import { useJobQueueStore } from '@/lib/stores/job-queue-store';
 import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
+import ShareModal from '@/app/components/ShareModal';
 import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 import type { Job } from '@/lib/queue';
 
@@ -150,6 +152,15 @@ export default function LibraryContent() {
   // Style transfer state
   const [styleTransferImage, setStyleTransferImage] =
     useState<ImageWithBlob | null>(null);
+
+  // Share modal state
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareData, setShareData] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    mediaType: 'audio' | 'image';
+  } | null>(null);
 
   // Job queue state
   const queueJobs = useJobQueueStore((state) => state.jobs);
@@ -361,6 +372,16 @@ export default function LibraryContent() {
     link.href = audio.blobUrl;
     link.download = `${audio.metadata.prompt.slice(0, 30)}_${audio.id}.wav`;
     link.click();
+  };
+
+  const handleShareAudio = (audio: StoredAudio) => {
+    setShareData({
+      id: audio.id,
+      title: audio.metadata.prompt,
+      description: `${audio.metadata.type === 'bgm' ? 'BGM' : 'SFX'} - ${audio.metadata.genre}`,
+      mediaType: 'audio',
+    });
+    setShareModalOpen(true);
   };
 
   const handleDeleteAudio = async (id: string) => {
@@ -1051,6 +1072,14 @@ export default function LibraryContent() {
                           </button>
 
                           <button
+                            onClick={() => handleShareAudio(audio)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 rounded-lg text-xs font-medium text-purple-400 transition-colors"
+                          >
+                            <Share2 className="w-3 h-3" />
+                            공유
+                          </button>
+
+                          <button
                             onClick={() => handleDeleteAudio(audio.id)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs font-medium text-red-400 transition-colors"
                           >
@@ -1723,6 +1752,15 @@ export default function LibraryContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {shareData && (
+        <ShareModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          data={shareData}
+        />
       )}
     </div>
   );
