@@ -374,24 +374,138 @@ export default function LibraryContent() {
     link.click();
   };
 
-  const handleShareAudio = (audio: StoredAudio) => {
+  const handleShareAudio = async (audio: StoredAudio) => {
+    // 1. Google Drive에 저장되어 있는지 확인
+    const audioMeta = audio.metadata as Record<string, unknown>;
+    let driveFileId = audioMeta.googleDriveId as string | undefined;
+
+    // 2. 저장되지 않았으면 저장
+    if (!driveFileId) {
+      if (!isAuthenticated) {
+        alert('공유하려면 먼저 Google Drive에 로그인해주세요');
+        return;
+      }
+
+      try {
+        setSavingToGoogleDrive(audio.id);
+        // Blob URL에서 Blob 직접 가져오기
+        let blob: Blob;
+        try {
+          const response = await fetch(audio.blobUrl);
+          blob = await response.blob();
+        } catch {
+          // Blob URL이 유효하지 않으면, base64 데이터로부터 Blob 생성
+          const binaryString = atob(audio.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          blob = new Blob([bytes], { type: 'audio/wav' });
+        }
+
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace(/:/g, '-');
+        const filename = `audio-${timestamp}.wav`;
+
+        const audioMeta = audio.metadata as Record<string, unknown>;
+        const metadata: Record<string, string> = {
+          prompt: audio.metadata.prompt || '',
+          type: audio.metadata.type || '',
+          genre: (audioMeta.genre as string) || '',
+          bpm: String(audioMeta.bpm || ''),
+          duration: String(audio.metadata.duration || ''),
+        };
+
+        const result = await uploadFile(blob, filename, 'audio', metadata);
+        if (result) {
+          driveFileId = result.id;
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to save audio to Google Drive:', error);
+        alert('❌ Google Drive 저장에 실패했습니다');
+        return;
+      } finally {
+        setSavingToGoogleDrive(null);
+      }
+    }
+
+    // 3. 공유 데이터 설정
     setShareData({
       id: audio.id,
       title: audio.metadata.prompt,
       description: `${audio.metadata.type === 'bgm' ? 'BGM' : 'SFX'} - ${audio.metadata.genre}`,
       mediaType: 'audio',
-    });
+      googleDriveFileId: driveFileId,
+    } as Parameters<typeof setShareData>[0]);
     setShareModalOpen(true);
   };
 
-  const handleShareImage = (image: ImageWithBlob) => {
+  const handleShareImage = async (image: ImageWithBlob) => {
+    // 1. Google Drive에 저장되어 있는지 확인
     const imageMeta = image.metadata as Record<string, unknown>;
+    let driveFileId = imageMeta.googleDriveId as string | undefined;
+
+    // 2. 저장되지 않았으면 저장
+    if (!driveFileId) {
+      if (!isAuthenticated) {
+        alert('공유하려면 먼저 Google Drive에 로그인해주세요');
+        return;
+      }
+
+      try {
+        setSavingToGoogleDrive(image.id);
+        // Blob URL에서 Blob 직접 가져오기
+        let blob: Blob;
+        try {
+          const response = await fetch(image.blobUrl);
+          blob = await response.blob();
+        } catch {
+          // Blob URL이 유효하지 않으면, base64 데이터로부터 Blob 생성
+          const binaryString = atob(image.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          blob = new Blob([bytes], { type: 'image/png' });
+        }
+
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace(/:/g, '-');
+        const filename = `art-${timestamp}.png`;
+
+        const imageMeta = image.metadata as Record<string, unknown>;
+        const metadata: Record<string, string> = {
+          prompt: image.metadata.prompt || '',
+          technique: (imageMeta.technique as string) || '',
+        };
+
+        const result = await uploadFile(blob, filename, 'image', metadata);
+        if (result) {
+          driveFileId = result.id;
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to save image to Google Drive:', error);
+        alert('❌ Google Drive 저장에 실패했습니다');
+        return;
+      } finally {
+        setSavingToGoogleDrive(null);
+      }
+    }
+
+    // 3. 공유 데이터 설정
     setShareData({
       id: image.id,
       title: image.metadata.prompt,
       description: `${imageMeta.technique || 'AI Generated'} - ${image.metadata.prompt.slice(0, 50)}...`,
       mediaType: 'image',
-    });
+      googleDriveFileId: driveFileId,
+    } as Parameters<typeof setShareData>[0]);
     setShareModalOpen(true);
   };
 

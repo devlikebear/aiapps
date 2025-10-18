@@ -9,6 +9,8 @@ export interface ShareData {
   description: string;
   mediaType: 'audio' | 'image';
   url?: string; // 공유 링크 (향후 추가될 예정)
+  googleDriveFileId?: string; // Google Drive 파일 ID
+  googleDriveWebViewLink?: string; // Google Drive 공개 링크
 }
 
 /**
@@ -83,6 +85,25 @@ export const generateShareableUrl = (data: ShareData): string => {
 };
 
 /**
+ * Google Drive 공유 링크 생성
+ */
+export const generateGoogleDriveShareUrl = (fileId: string): string => {
+  return `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+};
+
+/**
+ * Google Drive 공유 링크를 텍스트에 포함
+ */
+export const formatGoogleDriveShareText = (data: ShareData): string => {
+  if (!data.googleDriveFileId) {
+    return formatShareText(data);
+  }
+
+  const shareUrl = generateGoogleDriveShareUrl(data.googleDriveFileId);
+  return `${data.title}\n${data.description}\n\n🔗 링크: ${shareUrl}`;
+};
+
+/**
  * 웹 Share API를 사용한 기본 공유 (모바일)
  */
 export const shareViaWebApi = async (data: ShareData): Promise<boolean> => {
@@ -94,7 +115,10 @@ export const shareViaWebApi = async (data: ShareData): Promise<boolean> => {
     await navigator.share({
       title: data.title,
       text: data.description,
-      url: data.url || generateShareableUrl(data),
+      url:
+        (data.googleDriveFileId
+          ? generateGoogleDriveShareUrl(data.googleDriveFileId)
+          : data.url) || generateShareableUrl(data),
     });
     return true;
   } catch (err) {

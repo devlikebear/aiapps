@@ -9,11 +9,13 @@ import {
   Instagram,
   AlertCircle,
   Check,
+  FolderOpen,
 } from 'lucide-react';
 import {
   generateTwitterShareUrl,
   generateInstagramShareText,
   generateEmailShareUrl,
+  generateGoogleDriveShareUrl,
   copyToClipboard,
   formatShareText,
   type ShareData,
@@ -132,6 +134,22 @@ export default function ShareModal({ isOpen, onClose, data }: ShareModalProps) {
               <Mail className="w-5 h-5" />
               <span>이메일로 보내기</span>
             </button>
+
+            {/* Google Drive */}
+            {data.googleDriveFileId && (
+              <button
+                onClick={() => {
+                  const driveUrl = generateGoogleDriveShareUrl(
+                    data.googleDriveFileId!
+                  );
+                  window.open(driveUrl, 'google-drive-share');
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all duration-200 font-medium"
+              >
+                <FolderOpen className="w-5 h-5" />
+                <span>Google Drive에서 열기</span>
+              </button>
+            )}
           </div>
 
           {/* Direct Link 복사 */}
