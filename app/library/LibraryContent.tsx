@@ -31,6 +31,7 @@ import {
   Share2,
   Sparkles,
   Copy,
+  Send,
 } from 'lucide-react';
 import { Button } from '@aiapps/ui';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
@@ -61,6 +62,8 @@ import {
 import type { Job } from '@/lib/queue';
 import { getAllTweets, deleteTweet } from '@/lib/tweet/storage';
 import type { StoredTweet } from '@/lib/tweet/types';
+import { useTwitterStore } from '@/lib/stores/twitter-store';
+import { postTweetToTwitter } from '@/lib/twitter/client';
 
 type MediaType = 'all' | 'audio' | 'image' | 'tweet';
 
@@ -659,6 +662,28 @@ export default function LibraryContent() {
       alert('✓ 트윗이 복사되었습니다');
     } catch {
       alert('❌ 복사에 실패했습니다');
+    }
+  };
+
+  const handlePostTweetToTwitter = async (tweetText: string) => {
+    const { isAuthenticated: twitterAuthenticated, accessToken } =
+      useTwitterStore.getState();
+
+    if (!twitterAuthenticated || !accessToken) {
+      alert('Twitter에 게시하려면 먼저 연동해주세요');
+      // TODO: Twitter 로그인 다이얼로그 오픈
+      return;
+    }
+
+    try {
+      await postTweetToTwitter(accessToken, tweetText);
+      alert('✓ Twitter에 게시되었습니다!');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Twitter 게시에 실패했습니다';
+      alert(`❌ ${message}`);
+      // eslint-disable-next-line no-console
+      console.error('Failed to post tweet:', error);
     }
   };
 
@@ -1799,6 +1824,16 @@ export default function LibraryContent() {
                           >
                             <Copy className="w-3 h-3" />
                             복사
+                          </button>
+                          <button
+                            onClick={() =>
+                              handlePostTweetToTwitter(tweet.tweet)
+                            }
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg text-xs font-medium text-blue-400 transition-colors"
+                            title="Twitter에 게시"
+                          >
+                            <Send className="w-3 h-3" />
+                            게시
                           </button>
                           <button
                             onClick={() => handleDeleteTweet(tweet.id)}
