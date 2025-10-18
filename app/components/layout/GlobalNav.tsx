@@ -3,7 +3,15 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Music, ImageIcon, Library, Cloud } from 'lucide-react';
+import {
+  Search,
+  Music,
+  ImageIcon,
+  Library,
+  Cloud,
+  HelpCircle,
+  Lightbulb,
+} from 'lucide-react';
 import { hasApiKey } from '@/lib/api-key/storage';
 import ApiKeySettings from '@/components/ApiKeySettings';
 import JobQueueButton from '@/components/queue/JobQueueButton';
@@ -160,6 +168,36 @@ function GlobalNav() {
               >
                 <Cloud className="w-4 h-4" aria-hidden="true" />
                 <span className="text-sm font-medium">Cloud</span>
+              </Link>
+
+              {/* Help */}
+              <Link
+                href="/help"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  isActive('/help')
+                    ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/30'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+                aria-label="사용 가이드로 이동"
+                aria-current={isActive('/help') ? 'page' : undefined}
+              >
+                <HelpCircle className="w-4 h-4" aria-hidden="true" />
+                <span className="text-sm font-medium">가이드</span>
+              </Link>
+
+              {/* Onboarding */}
+              <Link
+                href="/onboarding"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  isActive('/onboarding')
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+                aria-label="시작 가이드로 이동"
+                aria-current={isActive('/onboarding') ? 'page' : undefined}
+              >
+                <Lightbulb className="w-4 h-4" aria-hidden="true" />
+                <span className="text-sm font-medium">시작</span>
               </Link>
             </div>
 
@@ -350,6 +388,30 @@ function GlobalNav() {
             >
               <Cloud className="w-4 h-4" />
               Cloud
+            </Link>
+
+            <Link
+              href="/help"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${
+                isActive('/help')
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-800 text-gray-300'
+              }`}
+            >
+              <HelpCircle className="w-4 h-4" />
+              가이드
+            </Link>
+
+            <Link
+              href="/onboarding"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${
+                isActive('/onboarding')
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-800 text-gray-300'
+              }`}
+            >
+              <Lightbulb className="w-4 h-4" />
+              시작
             </Link>
           </div>
         </div>
