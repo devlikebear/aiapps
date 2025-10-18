@@ -664,6 +664,45 @@ export default function LibraryContent() {
     }
   };
 
+  const handleSaveTweetToGoogleDrive = async (tweet: StoredTweet) => {
+    if (!isAuthenticated) {
+      alert('Google Drive에 저장하려면 먼저 로그인해주세요');
+      return;
+    }
+
+    setSavingToGoogleDrive(tweet.id);
+    try {
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, '-');
+      const filename = `tweet-${timestamp}.txt`;
+
+      // 트윗을 텍스트 파일로 생성
+      const tweetBlob = new Blob([tweet.tweet], { type: 'text/plain' });
+
+      // 메타데이터 생성
+      const metadata: Record<string, string> = {
+        tone: tweet.metadata.tone || '',
+        length: tweet.metadata.length || '',
+        prompt: (tweet.metadata.prompt as string) || '',
+        hasHashtags: String(tweet.metadata.hasHashtags || false),
+        hasEmoji: String(tweet.metadata.hasEmoji || false),
+      };
+
+      const result = await uploadFile(tweetBlob, filename, 'tweet', metadata);
+      if (result) {
+        alert('✅ 트윗이 Google Drive에 저장되었습니다!');
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save tweet to Google Drive:', error);
+      alert('❌ Google Drive 저장에 실패했습니다');
+    } finally {
+      setSavingToGoogleDrive(null);
+    }
+  };
+
   const handlePostTweetToTwitter = (tweetText: string) => {
     const shareData: ShareData = {
       id: `tweet-${Date.now()}`,
@@ -1812,6 +1851,15 @@ export default function LibraryContent() {
                           >
                             <Copy className="w-3 h-3" />
                             복사
+                          </button>
+                          <button
+                            onClick={() => handleSaveTweetToGoogleDrive(tweet)}
+                            disabled={savingToGoogleDrive === tweet.id}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 disabled:opacity-50 rounded-lg text-xs font-medium text-amber-400 transition-colors"
+                            title="Google Drive에 저장"
+                          >
+                            <Cloud className="w-3 h-3" />
+                            저장
                           </button>
                           <button
                             onClick={() =>
