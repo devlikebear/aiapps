@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Music, ImageIcon, Library } from 'lucide-react';
+import { Search, Music, ImageIcon, Library, Cloud } from 'lucide-react';
 import { hasApiKey } from '@/lib/api-key/storage';
 import ApiKeySettings from '@/components/ApiKeySettings';
 import JobQueueButton from '@/components/queue/JobQueueButton';
@@ -143,6 +143,23 @@ function GlobalNav() {
               >
                 <Library className="w-4 h-4" aria-hidden="true" />
                 <span className="text-sm font-medium">라이브러리</span>
+              </Link>
+
+              {/* Cloud Library */}
+              <Link
+                href="/apps/cloud-library"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  isActive('/apps/cloud-library')
+                    ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/30'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+                aria-label="Cloud Library로 이동"
+                aria-current={
+                  isActive('/apps/cloud-library') ? 'page' : undefined
+                }
+              >
+                <Cloud className="w-4 h-4" aria-hidden="true" />
+                <span className="text-sm font-medium">Cloud</span>
               </Link>
             </div>
 
@@ -321,6 +338,18 @@ function GlobalNav() {
             >
               <Library className="w-4 h-4" />
               라이브러리
+            </Link>
+
+            <Link
+              href="/apps/cloud-library"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${
+                isActive('/apps/cloud-library')
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-gray-800 text-gray-300'
+              }`}
+            >
+              <Cloud className="w-4 h-4" />
+              Cloud
             </Link>
           </div>
         </div>
