@@ -27,6 +27,7 @@ import {
   FileArchive,
   Loader2,
   Clock,
+  Cloud,
 } from 'lucide-react';
 import { Button } from '@aiapps/ui';
 import { getAllAudio, deleteAudio } from '@/lib/storage/indexed-db';
@@ -46,6 +47,8 @@ import {
   type DuplicateStrategy,
 } from '@/lib/utils/gallery-import';
 import { useJobQueueStore } from '@/lib/stores/job-queue-store';
+import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
+import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 import type { Job } from '@/lib/queue';
 
 type MediaType = 'all' | 'audio' | 'image';
@@ -180,6 +183,13 @@ export default function LibraryContent() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [duplicateStrategy, setDuplicateStrategy] =
     useState<DuplicateStrategy>('skip');
+
+  // Google Drive save state
+  const { isAuthenticated } = useGoogleDriveStore();
+  const uploadFile = useGoogleDriveUpload();
+  const [savingToGoogleDrive, setSavingToGoogleDrive] = useState<string | null>(
+    null
+  );
 
   // Update tab from URL
   useEffect(() => {
@@ -320,6 +330,88 @@ export default function LibraryContent() {
       if (selectedImage?.id === id) {
         setSelectedImage(null);
       }
+    }
+  };
+
+  // Google Drive save handlers
+  const handleSaveAudioToGoogleDrive = async (audio: AudioWithBlob) => {
+    if (!isAuthenticated) {
+      alert('Google Drive에 저장하려면 먼저 로그인해주세요');
+      return;
+    }
+
+    setSavingToGoogleDrive(audio.id);
+    try {
+      // Fetch blob from blobUrl
+      const response = await fetch(audio.blobUrl);
+      const blob = await response.blob();
+
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, '-');
+      const filename = `audio-${timestamp}.wav`;
+
+      const audioMeta = audio.metadata as Record<string, unknown>;
+      const metadata: Record<string, string> = {
+        prompt: audio.metadata.prompt || '',
+        type: audio.metadata.type || '',
+        genre: (audioMeta.genre as string) || '',
+        bpm: String(audioMeta.bpm || ''),
+        duration: String(audio.metadata.duration || ''),
+      };
+
+      const result = await uploadFile(blob, filename, 'audio', metadata);
+      if (result) {
+        alert('✅ 오디오가 Google Drive에 저장되었습니다!');
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save audio to Google Drive:', error);
+      alert('❌ Google Drive 저장에 실패했습니다');
+    } finally {
+      setSavingToGoogleDrive(null);
+    }
+  };
+
+  const handleSaveImageToGoogleDrive = async (image: ImageWithBlob) => {
+    if (!isAuthenticated) {
+      alert('Google Drive에 저장하려면 먼저 로그인해주세요');
+      return;
+    }
+
+    setSavingToGoogleDrive(image.id);
+    try {
+      // Fetch blob from blobUrl
+      const response = await fetch(image.blobUrl);
+      const blob = await response.blob();
+
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, '-');
+      const filename = `art-${timestamp}.png`;
+
+      const imageMeta = image.metadata as Record<string, unknown>;
+      const metadata: Record<string, string> = {
+        prompt: image.metadata.prompt || '',
+        style: (imageMeta.style as string) || '',
+        width: String(imageMeta.width || ''),
+        height: String(imageMeta.height || ''),
+        quality: (imageMeta.quality as string) || '',
+        seed: imageMeta.seed ? String(imageMeta.seed) : '',
+      };
+
+      const result = await uploadFile(blob, filename, 'image', metadata);
+      if (result) {
+        alert('✅ 이미지가 Google Drive에 저장되었습니다!');
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save image to Google Drive:', error);
+      alert('❌ Google Drive 저장에 실패했습니다');
+    } finally {
+      setSavingToGoogleDrive(null);
     }
   };
 
@@ -839,13 +931,39 @@ export default function LibraryContent() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-700">
                           <button
                             onClick={() => handleDownloadAudio(audio)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium text-gray-300 transition-colors"
                           >
                             <Download className="w-3 h-3" />
                             다운로드
+                          </button>
+
+                          <button
+                            onClick={() => handleSaveAudioToGoogleDrive(audio)}
+                            disabled={
+                              savingToGoogleDrive === audio.id ||
+                              !isAuthenticated
+                            }
+                            className="flex items-center gap-1 px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 disabled:opacity-50 rounded-lg text-xs font-medium text-cyan-400 transition-colors"
+                            title={
+                              isAuthenticated
+                                ? 'Google Drive에 저장'
+                                : 'Google Drive에 로그인 필요'
+                            }
+                          >
+                            {savingToGoogleDrive === audio.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border border-cyan-400 border-t-transparent" />
+                                저장 중
+                              </>
+                            ) : (
+                              <>
+                                <Cloud className="w-3 h-3" />
+                                Cloud 저장
+                              </>
+                            )}
                           </button>
 
                           <button
@@ -1069,6 +1187,28 @@ export default function LibraryContent() {
                                   PNG
                                 </button>
                                 <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSaveImageToGoogleDrive(image);
+                                  }}
+                                  disabled={
+                                    savingToGoogleDrive === image.id ||
+                                    !isAuthenticated
+                                  }
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 disabled:opacity-50 rounded-lg text-xs font-medium text-cyan-400 transition-colors"
+                                  title={
+                                    isAuthenticated
+                                      ? 'Google Drive에 저장'
+                                      : 'Google Drive에 로그인 필요'
+                                  }
+                                >
+                                  {savingToGoogleDrive === image.id ? (
+                                    <div className="animate-spin rounded-full h-3 w-3 border border-cyan-400 border-t-transparent" />
+                                  ) : (
+                                    <Cloud className="w-3 h-3" />
+                                  )}
+                                </button>
+                                <button
                                   onClick={() => handleDeleteImage(image.id)}
                                   className="px-2 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
                                 >
@@ -1289,14 +1429,39 @@ export default function LibraryContent() {
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors"
                   >
                     <Download className="w-5 h-5" />
-                    PNG 다운로드
+                    PNG
                   </button>
                   <button
                     onClick={() => handleDownloadImage(selectedImage, 'jpg')}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors"
                   >
                     <Download className="w-5 h-5" />
-                    JPG 다운로드
+                    JPG
+                  </button>
+                  <button
+                    onClick={() => handleSaveImageToGoogleDrive(selectedImage)}
+                    disabled={
+                      savingToGoogleDrive === selectedImage.id ||
+                      !isAuthenticated
+                    }
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:hover:bg-cyan-600 rounded-xl font-medium transition-colors"
+                    title={
+                      isAuthenticated
+                        ? 'Google Drive에 저장'
+                        : 'Google Drive에 로그인 필요'
+                    }
+                  >
+                    {savingToGoogleDrive === selectedImage.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border border-white border-t-transparent" />
+                        저장 중
+                      </>
+                    ) : (
+                      <>
+                        <Cloud className="w-5 h-5" />
+                        Cloud 저장
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => {
