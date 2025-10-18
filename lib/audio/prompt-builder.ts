@@ -115,32 +115,34 @@ export class AudioPromptBuilder {
       parts.push(description as string);
     }
 
-    // 무드/특성
+    // 무드/특성/성격
     const mood = values['mood'];
     if (mood) {
       if (Array.isArray(mood) && mood.length > 0) {
-        parts.push(mood.join(' and '));
+        parts.push(`with ${mood.join(' and ')} character`);
       } else if (typeof mood === 'string') {
-        parts.push(mood);
+        parts.push(`with ${mood} character`);
       }
     }
 
     // 악기/음원
     const soundSource = values['soundSource'];
     if (soundSource) {
-      parts.push(soundSource as string);
+      parts.push(`using ${soundSource as string}`);
     }
 
     // 지속시간
     const duration = values['duration'];
     if (duration) {
-      parts.push(`${duration} seconds duration`);
+      parts.push(`${duration} seconds in length`);
     }
 
     // 인텐시티 (강도)
     const intensity = values['intensity'];
-    if (intensity) {
-      parts.push(`with ${intensity} intensity`);
+    if (intensity && typeof intensity === 'number') {
+      const intensityLabel =
+        intensity < 0.3 ? 'subtle' : intensity < 0.7 ? 'moderate' : 'intense';
+      parts.push(`${intensityLabel} intensity`);
     }
 
     // 이펙트
@@ -202,15 +204,15 @@ export class AudioPromptBuilder {
   ): string {
     switch (category) {
       case 'ui':
-        return 'User interface sound effect';
+        return 'User interface click and notification sound effect';
       case 'environment':
-        return 'Environmental ambient sound';
+        return 'Natural ambient environmental sound';
       case 'impact':
-        return 'Impact collision sound effect';
+        return 'Heavy impact collision or explosion sound effect';
       case 'magic':
-        return 'Magical spell cast sound effect';
+        return 'Magical spell cast and enchantment sound effect';
       case 'voice':
-        return 'Voice and vocal sound effect';
+        return 'Character voice and vocal sound effect';
       default:
         return 'Sound effect';
     }
