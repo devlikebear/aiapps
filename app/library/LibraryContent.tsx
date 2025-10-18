@@ -62,8 +62,7 @@ import {
 import type { Job } from '@/lib/queue';
 import { getAllTweets, deleteTweet } from '@/lib/tweet/storage';
 import type { StoredTweet } from '@/lib/tweet/types';
-import { useTwitterStore } from '@/lib/stores/twitter-store';
-import { postTweetToTwitter } from '@/lib/twitter/client';
+import { generateTwitterShareUrl, type ShareData } from '@/lib/utils/share';
 
 type MediaType = 'all' | 'audio' | 'image' | 'tweet';
 
@@ -665,26 +664,15 @@ export default function LibraryContent() {
     }
   };
 
-  const handlePostTweetToTwitter = async (tweetText: string) => {
-    const { isAuthenticated: twitterAuthenticated, accessToken } =
-      useTwitterStore.getState();
-
-    if (!twitterAuthenticated || !accessToken) {
-      alert('Twitter에 게시하려면 먼저 연동해주세요');
-      // TODO: Twitter 로그인 다이얼로그 오픈
-      return;
-    }
-
-    try {
-      await postTweetToTwitter(accessToken, tweetText);
-      alert('✓ Twitter에 게시되었습니다!');
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Twitter 게시에 실패했습니다';
-      alert(`❌ ${message}`);
-      // eslint-disable-next-line no-console
-      console.error('Failed to post tweet:', error);
-    }
+  const handlePostTweetToTwitter = (tweetText: string) => {
+    const shareData: ShareData = {
+      id: `tweet-${Date.now()}`,
+      title: '생성된 트윗',
+      description: tweetText,
+      mediaType: 'audio', // tweet이 없으니 audio로 처리
+    };
+    const url = generateTwitterShareUrl(shareData);
+    window.open(url, 'twitter-share', 'width=550,height=420');
   };
 
   // Google Drive save handlers
