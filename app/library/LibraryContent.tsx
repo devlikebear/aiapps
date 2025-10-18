@@ -444,8 +444,14 @@ export default function LibraryContent() {
       }
     }
 
-    // 3. 공유 옵션 선택 다이얼로그 표시
-    setPendingShareAudio(audio);
+    // 3. 공유 옵션 선택 다이얼로그 표시 (업로드된 파일 ID와 함께)
+    setPendingShareAudio({
+      ...audio,
+      metadata: {
+        ...audio.metadata,
+        googleDriveId: driveFileId,
+      } as Record<string, unknown>,
+    } as StoredAudio);
     setShowShareOptions(true);
   };
 
@@ -546,8 +552,14 @@ export default function LibraryContent() {
       }
     }
 
-    // 3. 공유 옵션 선택 다이얼로그 표시
-    setPendingShareImage(image);
+    // 3. 공유 옵션 선택 다이얼로그 표시 (업로드된 파일 ID와 함께)
+    setPendingShareImage({
+      ...image,
+      metadata: {
+        ...image.metadata,
+        googleDriveId: driveFileId,
+      } as Record<string, unknown>,
+    } as ImageWithBlob);
     setShowShareOptions(true);
   };
 
