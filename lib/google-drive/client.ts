@@ -5,7 +5,7 @@
 
 'use client';
 
-import { googleDriveConfig, GOOGLE_DRIVE_FOLDERS, MIME_TYPES } from './config';
+import { MIME_TYPES } from './config';
 
 /**
  * Google Drive 파일 메타데이터
@@ -83,6 +83,7 @@ export async function ensureGoogleDriveFolder(
     const createdFolder = (await createResponse.json()) as GoogleDriveFile;
     return createdFolder.id;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error ensuring Google Drive folder:', error);
     throw error;
   }
@@ -137,6 +138,7 @@ export async function uploadFileToGoogleDrive(
     const uploadedFile = (await response.json()) as GoogleDriveFile;
     return uploadedFile;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error uploading file to Google Drive:', error);
     throw error;
   }
@@ -185,6 +187,7 @@ export async function listFilesFromGoogleDrive(
     };
     return data;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error listing files from Google Drive:', error);
     throw error;
   }
@@ -212,6 +215,7 @@ export async function deleteFileFromGoogleDrive(
       throw new Error(`Failed to delete file: ${response.statusText}`);
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error deleting file from Google Drive:', error);
     throw error;
   }
@@ -263,6 +267,7 @@ export async function shareGoogleDriveFile(
     // 공유 링크 반환
     return `https://drive.google.com/file/d/${fileId}/view`;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error sharing file on Google Drive:', error);
     throw error;
   }
