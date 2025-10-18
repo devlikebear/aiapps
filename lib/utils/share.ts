@@ -17,7 +17,14 @@ export interface ShareData {
  * Twitter/X 공유 URL 생성
  */
 export const generateTwitterShareUrl = (data: ShareData): string => {
-  const text = `${data.title}\n${data.description}`;
+  let text = `${data.title}\n${data.description}`;
+
+  // Google Drive 링크가 있으면 포함
+  if (data.googleDriveFileId) {
+    const driveUrl = generateGoogleDriveShareUrl(data.googleDriveFileId);
+    text += `\n\n🔗 ${driveUrl}`;
+  }
+
   const params = new URLSearchParams({
     text: text,
     hashtags: 'aiapps,generative-ai,gamedev',
@@ -39,7 +46,16 @@ export const generateInstagramShareText = (data: ShareData): string => {
  */
 export const generateEmailShareUrl = (data: ShareData): string => {
   const subject = `Check out this ${data.mediaType}: ${data.title}`;
-  const body = `I wanted to share this with you:\n\n${data.title}\n${data.description}\n\nGenerated with AI Apps`;
+  let body = `I wanted to share this with you:\n\n${data.title}\n${data.description}`;
+
+  // Google Drive 링크가 있으면 포함
+  if (data.googleDriveFileId) {
+    const driveUrl = generateGoogleDriveShareUrl(data.googleDriveFileId);
+    body += `\n\n🔗 Link: ${driveUrl}`;
+  }
+
+  body += '\n\nGenerated with AI Apps';
+
   const params = new URLSearchParams({
     subject,
     body,

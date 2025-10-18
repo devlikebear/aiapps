@@ -13,11 +13,10 @@ import {
 } from 'lucide-react';
 import {
   generateTwitterShareUrl,
-  generateInstagramShareText,
   generateEmailShareUrl,
   generateGoogleDriveShareUrl,
+  formatGoogleDriveShareText,
   copyToClipboard,
-  formatShareText,
   type ShareData,
 } from '@/lib/utils/share';
 
@@ -34,7 +33,7 @@ export default function ShareModal({ isOpen, onClose, data }: ShareModalProps) {
   if (!isOpen) return null;
 
   const handleDirectLinkCopy = async () => {
-    const text = formatShareText(data);
+    const text = formatGoogleDriveShareText(data);
     const success = await copyToClipboard(text);
     if (success) {
       setCopied(true);
@@ -43,7 +42,7 @@ export default function ShareModal({ isOpen, onClose, data }: ShareModalProps) {
   };
 
   const handleInstagramCopy = async () => {
-    const text = generateInstagramShareText(data);
+    const text = formatGoogleDriveShareText(data);
     const success = await copyToClipboard(text);
     if (success) {
       setInstagramCopied(true);
