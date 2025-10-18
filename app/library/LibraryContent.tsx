@@ -342,9 +342,20 @@ export default function LibraryContent() {
 
     setSavingToGoogleDrive(audio.id);
     try {
-      // Fetch blob from blobUrl
-      const response = await fetch(audio.blobUrl);
-      const blob = await response.blob();
+      // Blob URL에서 Blob 직접 가져오기
+      let blob: Blob;
+      try {
+        const response = await fetch(audio.blobUrl);
+        blob = await response.blob();
+      } catch {
+        // Blob URL이 유효하지 않으면, base64 데이터로부터 Blob 생성
+        const binaryString = atob(audio.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        blob = new Blob([bytes], { type: 'audio/wav' });
+      }
 
       const timestamp = new Date()
         .toISOString()
@@ -382,9 +393,20 @@ export default function LibraryContent() {
 
     setSavingToGoogleDrive(image.id);
     try {
-      // Fetch blob from blobUrl
-      const response = await fetch(image.blobUrl);
-      const blob = await response.blob();
+      // Blob URL에서 Blob 직접 가져오기
+      let blob: Blob;
+      try {
+        const response = await fetch(image.blobUrl);
+        blob = await response.blob();
+      } catch {
+        // Blob URL이 유효하지 않으면, base64 데이터로부터 Blob 생성
+        const binaryString = atob(image.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        blob = new Blob([bytes], { type: 'image/png' });
+      }
 
       const timestamp = new Date()
         .toISOString()
