@@ -66,45 +66,7 @@ export class TweetGeneratorClient {
    * 프롬프트 빌드
    */
   private buildPrompt(request: TweetGenerateRequest): string {
-    const toneDesc = TONE_DESCRIPTIONS[request.tone];
-    const lengthInfo = LENGTH_DESCRIPTIONS[request.length];
-    const mode = request.mode || 'standard';
-
-    let systemPrompt = `당신은 트윗 작성 전문가입니다. 사용자의 요청에 따라 매력적인 트윗을 작성합니다.\n\n`;
-
-    // 톤 지정
-    systemPrompt += `트윗의 톤: ${request.tone} (${toneDesc})\n`;
-
-    // 길이 제한
-    systemPrompt += `최대 문자 수: ${lengthInfo.char}자 (정확히 지켜주세요)\n`;
-
-    // 모드 지정
-    switch (mode) {
-      case 'creative':
-        systemPrompt += `모드: 창의적 (상상력 있고 독창적인 표현 사용)\n`;
-        break;
-      case 'factual':
-        systemPrompt += `모드: 팩트풀 (정확하고 신뢰할 수 있는 정보)\n`;
-        break;
-      default:
-        systemPrompt += `모드: 표준 (일반적이고 균형잡힌 표현)\n`;
-    }
-
-    // 추가 옵션
-    if (request.hashtags) {
-      systemPrompt += `- 관련 해시태그 포함 (1-3개)\n`;
-    }
-    if (request.emoji) {
-      systemPrompt += `- 적절한 이모지 포함 (과하지 않게)\n`;
-    }
-    if (request.mentions && request.mentions.length > 0) {
-      systemPrompt += `- @${request.mentions.join(', @')} 멘션 포함\n`;
-    }
-
-    systemPrompt += `\n오직 트윗만 반환하고 다른 설명은 추가하지 마세요.\n\n`;
-    systemPrompt += `사용자 입력: ${request.prompt}`;
-
-    return systemPrompt;
+    return buildTweetPrompt(request);
   }
 
   /**
@@ -142,4 +104,61 @@ export async function generateTweet(
 ): Promise<TweetGenerateResponse> {
   const client = new TweetGeneratorClient(apiKey);
   return client.generate(request);
+}
+
+/**
+ * 트윗 생성 프롬프트 빌드 (UI 프리뷰용)
+ * 실제 AI에 전송될 프롬프트를 미리볼 수 있음
+ */
+export function buildTweetPrompt(request: TweetGenerateRequest): string {
+  const toneDesc = request.toneDetails || TONE_DESCRIPTIONS[request.tone];
+  const lengthInfo = LENGTH_DESCRIPTIONS[request.length];
+  const mode = request.mode || 'standard';
+
+  let systemPrompt = `당신은 트윗 작성 전문가입니다. 사용자의 요청에 따라 매력적인 트윗을 작성합니다.\n\n`;
+
+  // 톤 지정 (상세 정보 포함)
+  if (request.toneDetails) {
+    systemPrompt += `## 트윗의 톤: ${request.toneDetails.label}\n`;
+    systemPrompt += `상세 설명: ${request.toneDetails.detailed}\n`;
+    systemPrompt += `생성 지시: ${request.toneDetails.promptImpact}\n`;
+    systemPrompt += `참고 예시:\n`;
+    request.toneDetails.examples.forEach((example) => {
+      systemPrompt += `  - ${example}\n`;
+    });
+    systemPrompt += `\n`;
+  } else {
+    systemPrompt += `트윗의 톤: ${request.tone} (${typeof toneDesc === 'string' ? toneDesc : toneDesc.brief})\n`;
+  }
+
+  // 길이 제한
+  systemPrompt += `최대 문자 수: ${lengthInfo.char}자 (정확히 지켜주세요)\n`;
+
+  // 모드 지정
+  switch (mode) {
+    case 'creative':
+      systemPrompt += `모드: 창의적 (상상력 있고 독창적인 표현 사용)\n`;
+      break;
+    case 'factual':
+      systemPrompt += `모드: 팩트풀 (정확하고 신뢰할 수 있는 정보)\n`;
+      break;
+    default:
+      systemPrompt += `모드: 표준 (일반적이고 균형잡힌 표현)\n`;
+  }
+
+  // 추가 옵션
+  if (request.hashtags) {
+    systemPrompt += `- 관련 해시태그 포함 (1-3개)\n`;
+  }
+  if (request.emoji) {
+    systemPrompt += `- 적절한 이모지 포함 (과하지 않게)\n`;
+  }
+  if (request.mentions && request.mentions.length > 0) {
+    systemPrompt += `- @${request.mentions.join(', @')} 멘션 포함\n`;
+  }
+
+  systemPrompt += `\n오직 트윗만 반환하고 다른 설명은 추가하지 마세요.\n\n`;
+  systemPrompt += `사용자 입력: ${request.prompt}`;
+
+  return systemPrompt;
 }

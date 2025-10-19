@@ -4,6 +4,7 @@
  */
 
 import type { ArtStyle, QualityPreset, ReferenceUsage } from '@/lib/art/types';
+import type { ToneInfo } from '@/lib/tweet/types';
 
 export type JobType =
   | 'audio-generate'
@@ -142,6 +143,7 @@ export interface TweetGenerateJob extends BaseJob {
     hashtags: boolean;
     emoji: boolean;
     mode: string;
+    toneDetails?: ToneInfo; // 톤의 상세 정보 (AI 프롬프트에 포함)
   };
   result?: {
     tweet: string;
