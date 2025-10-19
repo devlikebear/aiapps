@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, AlertCircle, ArrowLeft, Copy, Trash2 } from 'lucide-react';
+import { Sparkles, AlertCircle, ArrowLeft, Copy } from 'lucide-react';
 import { TONE_DESCRIPTIONS } from '@/lib/tweet/types';
 import { jobQueue } from '@/lib/queue';
 import { useTweetGeneration } from '@/lib/hooks/useMediaGeneration';
@@ -55,10 +55,8 @@ export default function TweetGeneratePage() {
         const allTweets = await getAllTweets();
         // 최신순 정렬 후 최대 5개만 표시
         const sorted = allTweets.sort((a, b) => {
-          const dateA =
-            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-          const dateB =
-            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          const dateA = new Date(a.createdAt);
+          const dateB = new Date(b.createdAt);
           return dateB.getTime() - dateA.getTime();
         });
         setRecentTweets(sorted.slice(0, 5));
@@ -84,10 +82,8 @@ export default function TweetGeneratePage() {
       try {
         const allTweets = await getAllTweets();
         const sorted = allTweets.sort((a, b) => {
-          const dateA =
-            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-          const dateB =
-            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          const dateA = new Date(a.createdAt);
+          const dateB = new Date(b.createdAt);
           return dateB.getTime() - dateA.getTime();
         });
         setRecentTweets(sorted.slice(0, 5));
@@ -314,7 +310,7 @@ export default function TweetGeneratePage() {
                         </p>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(tweet.text);
+                            navigator.clipboard.writeText(tweet.tweet);
                           }}
                           className="p-1 hover:bg-gray-600 rounded transition-colors"
                           title="복사"
@@ -323,7 +319,7 @@ export default function TweetGeneratePage() {
                         </button>
                       </div>
                       <p className="text-white text-xs leading-relaxed break-words line-clamp-3">
-                        {tweet.text}
+                        {tweet.tweet}
                       </p>
                     </div>
                   ))}

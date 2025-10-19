@@ -151,8 +151,8 @@ export default function ArtCreatePage() {
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
 
-  // Recent generated images state
-  const [recentImages, setRecentImages] = useState<StoredImage[]>([]);
+  // Recent generated images state (v1.1.1 feature)
+  const [_recentImages, setRecentImages] = useState<StoredImage[]>([]);
 
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
 

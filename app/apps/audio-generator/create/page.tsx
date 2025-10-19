@@ -57,11 +57,8 @@ export default function AudioCreatePage() {
     Map<string, HTMLAudioElement>
   >(new Map());
 
-  // Recent generated audio state
-  const [recentAudio, setRecentAudio] = useState<StoredAudio[]>([]);
-  const [playingRecentAudioId, setPlayingRecentAudioId] = useState<
-    string | null
-  >(null);
+  // Recent generated audio state (v1.1.1 feature)
+  const [_recentAudio, setRecentAudio] = useState<StoredAudio[]>([]);
 
   // Google Drive save state
   const [isSavingToDrive, setIsSavingToDrive] = useState(false);
