@@ -7,6 +7,7 @@ import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useArtStore } from '@/lib/stores/art-store';
 import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
 import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
+import { useImageGeneration } from '@/lib/hooks/useMediaGeneration';
 import {
   ART_STYLE_PRESETS,
   USAGE_TYPE_PRESETS,
@@ -212,6 +213,47 @@ export default function ArtCreatePage() {
 
     loadRelatedImages();
   }, [style, resolution, quality]);
+
+  // 이미지 생성 완료 이벤트 구독
+  useImageGeneration((event) => {
+    // eslint-disable-next-line no-console
+    console.log('[ArtGenerator] Image generation completed:', event);
+
+    // 관련 이미지 새로고침
+    const loadRelatedImages = async () => {
+      try {
+        const allImages = await getAllImages();
+
+        // 현재 설정에서 태그 생성
+        const currentTags = generateImageTags({
+          style,
+          resolution,
+          quality,
+        });
+
+        // 태그가 일치하는 이미지 필터링
+        const filtered = allImages.filter((image) =>
+          currentTags.some((tag) => image.tags?.includes(tag))
+        );
+
+        // 최신순 정렬
+        filtered.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setRelatedImages(filtered.slice(0, 6)); // 최대 6개만 표시
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load related images:', error);
+      }
+    };
+
+    loadRelatedImages();
+  });
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {

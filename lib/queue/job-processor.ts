@@ -19,6 +19,7 @@ import { generateAudioTags, generateImageTags } from '@/lib/utils/tags';
 import { getApiKey } from '@/lib/api-key/storage';
 import type { ArtStyle, QualityPreset } from '@/lib/art/types';
 import type { AudioMetadata } from '@/lib/audio/types';
+import { mediaGenerationEmitter } from '@/lib/events/mediaGenerationEvents';
 
 const POLL_INTERVAL = 5000; // 5초
 const MAX_CONCURRENT_JOBS = 2;
@@ -153,6 +154,21 @@ export class JobProcessor {
 
     await this.saveAudio(job, result);
 
+    // 오디오 생성 완료 이벤트 발생
+    mediaGenerationEmitter.emitAudioGenerated({
+      id: job.id,
+      audio: result.audioBase64,
+      format: 'wav',
+      metadata: {
+        genre: job.params.genre,
+        mood: (result.metadata?.mood as string) || 'unknown',
+        bpm: job.params.bpm || 0,
+        instruments: (result.metadata?.instruments as string[]) || [],
+        duration: job.params.duration || 0,
+        createdAt: new Date().toISOString(),
+      },
+    });
+
     // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Audio job completed: ${job.id}`);
   }
@@ -190,6 +206,32 @@ export class JobProcessor {
     });
 
     await this.saveGeneratedImages(job, images);
+
+    // 각 생성된 이미지에 대해 이벤트 발생
+    images.forEach(
+      (
+        image: { data: string; metadata?: Record<string, unknown> },
+        index: number
+      ) => {
+        const imgMetadata = (image.metadata as Record<string, unknown>) || {};
+        mediaGenerationEmitter.emitImageGenerated({
+          id: `${job.id}-${index}`,
+          data: image.data,
+          format: 'png',
+          metadata: {
+            style: job.params.style,
+            width: (imgMetadata.width as number) || 512,
+            height: (imgMetadata.height as number) || 512,
+            aspectRatio: (imgMetadata.aspectRatio as number) || 1.0,
+            fileSize: (imgMetadata.fileSize as number) || 0,
+            prompt: job.params.prompt,
+            quality: job.params.quality || 'standard',
+            createdAt: new Date().toISOString(),
+            hasWatermark: true,
+          },
+        });
+      }
+    );
 
     // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Image generate job completed: ${job.id}`);
@@ -237,6 +279,24 @@ export class JobProcessor {
         prompt: job.params.prompt,
         tags: ['edited', 'image-edit'],
       });
+
+      // 이미지 편집 완료 이벤트 발생
+      mediaGenerationEmitter.emitImageGenerated({
+        id: job.id,
+        data: imageData,
+        format: 'png',
+        metadata: {
+          style: 'edited',
+          width: (metadata?.width as number) || 512,
+          height: (metadata?.height as number) || 512,
+          aspectRatio: (metadata?.aspectRatio as number) || 1.0,
+          fileSize: (metadata?.fileSize as number) || 0,
+          prompt: job.params.prompt,
+          quality: 'standard',
+          createdAt: new Date().toISOString(),
+          hasWatermark: false,
+        },
+      });
     }
 
     // eslint-disable-next-line no-console
@@ -283,6 +343,24 @@ export class JobProcessor {
         metadata,
         prompt: job.params.prompt,
         tags: ['composed', 'image-compose'],
+      });
+
+      // 이미지 합성 완료 이벤트 발생
+      mediaGenerationEmitter.emitImageGenerated({
+        id: job.id,
+        data: imageData,
+        format: 'png',
+        metadata: {
+          style: 'composed',
+          width: (metadata?.width as number) || 512,
+          height: (metadata?.height as number) || 512,
+          aspectRatio: (metadata?.aspectRatio as number) || 1.0,
+          fileSize: (metadata?.fileSize as number) || 0,
+          prompt: job.params.prompt,
+          quality: 'standard',
+          createdAt: new Date().toISOString(),
+          hasWatermark: false,
+        },
       });
     }
 
@@ -336,6 +414,24 @@ export class JobProcessor {
         metadata,
         prompt: job.params.stylePrompt,
         tags: ['style-transfer', 'image-style-transfer'],
+      });
+
+      // 스타일 전이 완료 이벤트 발생
+      mediaGenerationEmitter.emitImageGenerated({
+        id: job.id,
+        data: imageData,
+        format: 'png',
+        metadata: {
+          style: 'style-transfer',
+          width: (metadata?.width as number) || 512,
+          height: (metadata?.height as number) || 512,
+          aspectRatio: (metadata?.aspectRatio as number) || 1.0,
+          fileSize: (metadata?.fileSize as number) || 0,
+          prompt: job.params.stylePrompt,
+          quality: 'standard',
+          createdAt: new Date().toISOString(),
+          hasWatermark: false,
+        },
       });
     }
 
@@ -407,6 +503,23 @@ export class JobProcessor {
           error
         );
       }
+
+      // 트윗 생성 완료 이벤트 발생
+      mediaGenerationEmitter.emitTweetGenerated({
+        id: job.id,
+        text: tweet,
+        metadata: {
+          tone: job.params.tone,
+          length: job.params.length,
+          characterCount: tweet.length,
+          hasHashtags: tweet.includes('#'),
+          hashtagCount: (tweet.match(/#\w+/g) || []).length,
+          hasEmoji: /\p{Emoji}/u.test(tweet),
+          emojiCount: (tweet.match(/\p{Emoji}/gu) || []).length,
+          mentionCount: (tweet.match(/@\w+/g) || []).length,
+          createdAt: new Date().toISOString(),
+        },
+      });
     }
 
     // eslint-disable-next-line no-console
