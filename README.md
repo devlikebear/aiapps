@@ -7,11 +7,12 @@
 **Gemini AI를 활용한 게임 오디오 & 아트 생성 플랫폼**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue)](https://github.com/devlikebear/aiapps/releases/tag/v1.0.0)
 [![Next.js](https://img.shields.io/badge/Next.js-15.5-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://vercel.com)
 
-[데모 보기](#) | [문서](./CLAUDE.md) | [배포 가이드](./DEPLOY.md) | [기여하기](./CONTRIBUTING.md)
+[데모 보기](#) | [문서](./CLAUDE.md) | [API 명세](./docs/API.md) | [배포 가이드](./DEPLOY.md) | [기여하기](./CONTRIBUTING.md)
 
 </div>
 
@@ -47,6 +48,11 @@
    - 2D 픽셀 아트, 캐릭터, 배경 생성
    - 이미지 편집 및 스타일 전이 지원
 
+3. **📝 AI 트윗 생성기**
+   - Gemini AI 기반 소셜 미디어 콘텐츠 생성
+   - 톤, 길이, 해시태그, 이모지 커스터마이징
+   - Twitter(X) 공유 및 Google Drive 저장 지원
+
 ---
 
 ## ✨ 주요 기능
@@ -66,6 +72,15 @@
 - **이미지 편집**: 생성된 이미지 수정 기능
 - **스타일 전이**: 참조 이미지의 스타일 적용
 - **갤러리 관리**: 태그 필터링, 검색, 다운로드
+
+### 📝 트윗 생성기
+
+- **프롬프트 빌더**: 톤, 길이, 해시태그, 이모지 설정
+- **톤 다양화**: Casual, Professional, Funny, Inspirational
+- **길이 옵션**: Short (140자), Medium (240자), Long (280자)
+- **소셜 공유**: Twitter(X) 직접 공유
+- **클라우드 저장**: Google Drive에 트윗 내용 자동 저장
+- **라이브러리 관리**: 생성된 트윗 통합 관리
 
 ### 🔐 보안 & 개인정보
 
@@ -193,13 +208,31 @@
    - 다운로드 (.png)
    - 편집 또는 스타일 전이
    - 갤러리에 저장
+   - Google Drive에 저장
 
-### 4. 미디어 라이브러리
+### 4. 트윗 생성
 
-- **필터링**: 태그, 미디어 타입별 필터
+1. **트윗 생성기** 페이지로 이동
+2. **프롬프트 빌더**에서 설정:
+   - 콘텐츠 설명 입력
+   - 톤 선택 (Casual, Professional, Funny, Inspirational)
+   - 길이 선택 (Short, Medium, Long)
+   - 해시태그 포함 여부
+   - 이모지 포함 여부
+3. **Generate** 버튼 클릭
+4. 생성 완료 후:
+   - 트윗 내용 미리보기
+   - Twitter(X)로 직접 공유
+   - Google Drive에 저장
+   - 라이브러리에 저장
+
+### 5. 미디어 라이브러리
+
+- **필터링**: 태그, 미디어 타입(오디오/이미지/트윗)별 필터
 - **검색**: 프롬프트 기반 검색
 - **정렬**: 날짜, 이름순 정렬
 - **일괄 작업**: 여러 미디어 선택 후 다운로드/삭제
+- **클라우드 동기화**: Google Drive와 자동 동기화
 
 ---
 
@@ -210,10 +243,13 @@ aiapps/
 ├── app/                          # Next.js App Router
 │   ├── apps/
 │   │   ├── audio-generator/      # 오디오 생성기 페이지
-│   │   └── art-generator/        # 아트 생성기 페이지
+│   │   ├── art-generator/        # 아트 생성기 페이지
+│   │   └── tweet-generator/      # 트윗 생성기 페이지
 │   ├── api/                      # API Routes
 │   │   ├── audio/                # 오디오 생성 API
 │   │   ├── art/                  # 아트 생성 API
+│   │   ├── tweet/                # 트윗 생성 API
+│   │   ├── google-drive/         # Google Drive 통합
 │   │   └── settings/             # 설정 API
 │   ├── settings/                 # 설정 페이지
 │   ├── library/                  # 통합 미디어 라이브러리
@@ -223,11 +259,15 @@ aiapps/
 │   │   ├── db/                   # IndexedDB 관리
 │   │   ├── monitoring/           # 성능 모니터링
 │   │   ├── queue/                # 배경 작업 큐
+│   │   ├── tweet/                # 트윗 생성 클라이언트
 │   │   └── stores/               # Zustand 스토어
 │   └── layout.tsx                # 루트 레이아웃
 ├── e2e/                          # E2E 테스트 (Playwright)
 ├── public/                       # 정적 파일
+├── docs/                         # 문서
+│   └── API.md                    # API 명세
 ├── .github/                      # GitHub 설정
+├── CHANGELOG.md                  # 변경 로그
 ├── CLAUDE.md                     # 개발자 가이드
 ├── DEPLOY.md                     # 배포 가이드
 ├── PLAN.md                       # 프로젝트 계획
