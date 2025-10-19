@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
 import { TONE_DESCRIPTIONS } from '@/lib/tweet/types';
 import { jobQueue } from '@/lib/queue';
+import { useTweetGeneration } from '@/lib/hooks/useMediaGeneration';
 
 const TONE_OPTIONS = [
   { value: 'casual', label: '캐주얼' },
@@ -34,6 +35,7 @@ export default function TweetGeneratePage() {
   // 생성 상태
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [generatedTweet, setGeneratedTweet] = useState<string | null>(null);
 
   // 자동 높이 조정
   useEffect(() => {
@@ -42,6 +44,20 @@ export default function TweetGeneratePage() {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [prompt]);
+
+  // 트윗 생성 완료 이벤트 구독
+  useTweetGeneration((event) => {
+    // eslint-disable-next-line no-console
+    console.log('[TweetGenerator] Tweet generation completed:', event);
+
+    // 생성된 트윗 표시
+    setGeneratedTweet(event.text);
+
+    // 3초 후 자동 초기화 (사용자가 라이브러리로 이동할 수 있도록)
+    setTimeout(() => {
+      setGeneratedTweet(null);
+    }, 5000);
+  });
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -236,19 +252,33 @@ export default function TweetGeneratePage() {
                 </div>
               )}
 
-              <div className="text-center py-8">
-                <Sparkles className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
-                <p className="text-gray-300 text-sm font-medium mb-2">
-                  작업 큐 기반 생성
-                </p>
-                <p className="text-gray-400 text-xs">
-                  생성 버튼을 누르면 백그라운드에서
-                  <br />
-                  비동기로 처리됩니다.
-                  <br />
-                  라이브러리에서 완성된 트윗을 확인하세요!
-                </p>
-              </div>
+              {generatedTweet ? (
+                <div className="bg-gradient-to-r from-sky-900/30 to-cyan-900/30 border border-sky-500/50 rounded-lg p-4 mb-4 animate-pulse">
+                  <p className="text-sm text-white font-medium mb-3">
+                    ✨ 방금 생성됨!
+                  </p>
+                  <p className="text-white text-sm leading-relaxed break-words">
+                    {generatedTweet}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-3">
+                    라이브러리에서 이 트윗을 저장하고 공유할 수 있습니다.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Sparkles className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
+                  <p className="text-gray-300 text-sm font-medium mb-2">
+                    작업 큐 기반 생성
+                  </p>
+                  <p className="text-gray-400 text-xs">
+                    생성 버튼을 누르면 백그라운드에서
+                    <br />
+                    비동기로 처리됩니다.
+                    <br />
+                    완성되면 여기에 표시됩니다!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
