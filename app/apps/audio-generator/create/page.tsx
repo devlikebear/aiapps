@@ -57,6 +57,9 @@ export default function AudioCreatePage() {
     Map<string, HTMLAudioElement>
   >(new Map());
 
+  // Recent generated audio state (v1.1.1 feature)
+  const [_recentAudio, setRecentAudio] = useState<StoredAudio[]>([]);
+
   // Google Drive save state
   const [isSavingToDrive, setIsSavingToDrive] = useState(false);
 
@@ -120,12 +123,35 @@ export default function AudioCreatePage() {
     loadRelatedAudio();
   }, [type, genre, customBpm, preset.bpm.default, duration, preset]);
 
+  // 최근 생성된 오디오 로드
+  useEffect(() => {
+    const loadRecentAudio = async () => {
+      try {
+        const allAudio = await getAllAudio();
+        // 최신순 정렬 후 최대 5개만 표시
+        const sorted = allAudio.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRecentAudio(sorted.slice(0, 5));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load recent audio:', error);
+      }
+    };
+
+    loadRecentAudio();
+  }, []);
+
   // 오디오 생성 완료 이벤트 리스너
   useAudioGeneration((event) => {
     // eslint-disable-next-line no-console
     console.log('[AudioGenerator] Audio generation completed:', event);
 
-    // 관련 오디오 새로 고침
+    // 관련 오디오 및 최근 오디오 새로 고침
     void (async () => {
       try {
         const allAudio = await getAllAudio();
@@ -154,9 +180,19 @@ export default function AudioCreatePage() {
         });
 
         setRelatedAudio(filtered.slice(0, 6)); // 최대 6개만 표시
+
+        // 최근 오디오 업데이트
+        const sorted = allAudio.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRecentAudio(sorted.slice(0, 5));
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Failed to refresh related audio:', error);
+        console.error('Failed to refresh audio:', error);
       }
     })();
   });
