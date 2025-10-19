@@ -9,12 +9,12 @@ import type { TweetGenerateRequest } from '@/lib/tweet/types';
 
 export async function POST(request: NextRequest) {
   try {
-    // API 키 확인
-    const apiKey = process.env.GEMINI_API_KEY;
+    // API 키를 헤더에서 가져오기
+    const apiKey = request.headers.get('X-API-Key');
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is not configured' },
-        { status: 500 }
+        { error: 'API key not provided' },
+        { status: 401 }
       );
     }
 
