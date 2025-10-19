@@ -11,6 +11,7 @@ export default function PresetsPage() {
   const [presets, setPresets] = useState<TweetPreset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [useCustomTone, setUseCustomTone] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -19,6 +20,7 @@ export default function PresetsPage() {
     hashtags: true,
     emoji: true,
     mode: 'standard' as const,
+    customToneDescription: '',
   });
 
   // 프리셋 로드
@@ -68,6 +70,7 @@ export default function PresetsPage() {
       await savePreset(newPreset);
       setPresets((prev) => [newPreset, ...prev]);
       setShowForm(false);
+      setUseCustomTone(false);
       setFormData({
         name: '',
         description: '',
@@ -76,6 +79,7 @@ export default function PresetsPage() {
         hashtags: true,
         emoji: true,
         mode: 'standard',
+        customToneDescription: '',
       });
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -150,22 +154,60 @@ export default function PresetsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  value={formData.tone}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      tone: e.target.value as typeof formData.tone,
-                    })
-                  }
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                >
-                  <option value="casual">캐주얼</option>
-                  <option value="professional">비즈니스</option>
-                  <option value="humorous">유머</option>
-                  <option value="inspirational">영감</option>
-                </select>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-2">
+                    기본 톤
+                  </label>
+                  <select
+                    value={formData.tone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tone: e.target.value as typeof formData.tone,
+                      })
+                    }
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    <option value="casual">캐주얼</option>
+                    <option value="professional">비즈니스</option>
+                    <option value="humorous">유머</option>
+                    <option value="inspirational">영감</option>
+                  </select>
+                </div>
 
+                <div>
+                  <label className="flex items-center gap-2 text-xs text-gray-400 mb-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useCustomTone}
+                      onChange={(e) => setUseCustomTone(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span>커스텀 톤 사용</span>
+                  </label>
+                  {useCustomTone ? (
+                    <textarea
+                      value={formData.customToneDescription}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          customToneDescription: e.target.value,
+                        })
+                      }
+                      placeholder="예: 친근하면서도 신뢰감 있고, 신나는 어조로 새로운 제품의 혁신성을 강조..."
+                      className="w-full bg-gray-700 border border-sky-500/50 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"
+                      rows={3}
+                    />
+                  ) : (
+                    <div className="w-full bg-gray-700/30 border border-gray-600 rounded-lg px-3 py-2 text-gray-500 text-xs h-20 flex items-center justify-center">
+                      기본 톤을 사용합니다
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">길이</label>
                 <select
                   value={formData.length}
                   onChange={(e) =>
@@ -174,7 +216,7 @@ export default function PresetsPage() {
                       length: e.target.value as typeof formData.length,
                     })
                   }
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
                   <option value="short">짧음 (140자)</option>
                   <option value="medium">중간 (200자)</option>
