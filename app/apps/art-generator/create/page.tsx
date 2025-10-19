@@ -151,6 +151,9 @@ export default function ArtCreatePage() {
   const [relatedImages, setRelatedImages] = useState<StoredImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
 
+  // Recent generated images state
+  const [recentImages, setRecentImages] = useState<StoredImage[]>([]);
+
   const estimatedCost = estimateGenerationCost(resolution, batchSize, quality);
 
   // 현재 선택된 스타일의 정보 가져오기
@@ -214,13 +217,36 @@ export default function ArtCreatePage() {
     loadRelatedImages();
   }, [style, resolution, quality]);
 
+  // 최근 생성된 이미지 로드
+  useEffect(() => {
+    const loadRecentImages = async () => {
+      try {
+        const allImages = await getAllImages();
+        // 최신순 정렬 후 최대 5개만 표시
+        const sorted = allImages.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRecentImages(sorted.slice(0, 5));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load recent images:', error);
+      }
+    };
+
+    loadRecentImages();
+  }, []);
+
   // 이미지 생성 완료 이벤트 구독
   useImageGeneration((event) => {
     // eslint-disable-next-line no-console
     console.log('[ArtGenerator] Image generation completed:', event);
 
-    // 관련 이미지 새로고침
-    const loadRelatedImages = async () => {
+    // 관련 이미지 및 최근 이미지 새로고침
+    const loadImages = async () => {
       try {
         const allImages = await getAllImages();
 
@@ -246,13 +272,23 @@ export default function ArtCreatePage() {
         });
 
         setRelatedImages(filtered.slice(0, 6)); // 최대 6개만 표시
+
+        // 최근 이미지 업데이트
+        const sorted = allImages.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRecentImages(sorted.slice(0, 5));
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Failed to load related images:', error);
+        console.error('Failed to load images:', error);
       }
     };
 
-    loadRelatedImages();
+    loadImages();
   });
 
   const handleGenerate = async () => {
