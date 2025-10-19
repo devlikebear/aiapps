@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Sparkles, AlertCircle, ArrowLeft, Copy } from 'lucide-react';
 import { TONE_DESCRIPTIONS } from '@/lib/tweet/types';
 import { jobQueue } from '@/lib/queue';
 import { useTweetGeneration } from '@/lib/hooks/useMediaGeneration';
-import { getAllTweets } from '@/lib/tweet/storage';
+import { getAllTweets, getPreset } from '@/lib/tweet/storage';
 import type { StoredTweet } from '@/lib/tweet/types';
 
 const TONE_OPTIONS = [
@@ -24,6 +25,7 @@ const LENGTH_OPTIONS = [
 
 export default function TweetGeneratePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchParams = useSearchParams();
 
   // 폼 상태
   const [prompt, setPrompt] = useState('');
@@ -39,6 +41,7 @@ export default function TweetGeneratePage() {
   const [error, setError] = useState('');
   const [generatedTweet, setGeneratedTweet] = useState<string | null>(null);
   const [recentTweets, setRecentTweets] = useState<StoredTweet[]>([]);
+  const [presetName, setPresetName] = useState<string | null>(null);
 
   // 자동 높이 조정
   useEffect(() => {
@@ -47,6 +50,37 @@ export default function TweetGeneratePage() {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [prompt]);
+
+  // 쿼리 파라미터에서 프리셋 로드
+  useEffect(() => {
+    const loadPresetFromQuery = async () => {
+      const presetId = searchParams.get('preset');
+      if (!presetId) return;
+
+      try {
+        const preset = await getPreset(presetId);
+        if (preset) {
+          // 프리셋 설정 적용
+          setTone(preset.tone);
+          setLength(preset.length);
+          setHashtags(preset.hashtags);
+          setEmoji(preset.emoji);
+          setPresetName(preset.name);
+
+          // eslint-disable-next-line no-console
+          console.log('[TweetGenerator] Preset loaded:', preset.name);
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn('[TweetGenerator] Preset not found:', presetId);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[TweetGenerator] Error loading preset:', error);
+      }
+    };
+
+    loadPresetFromQuery();
+  }, [searchParams]);
 
   // 최근 트윗 로드
   useEffect(() => {
@@ -154,7 +188,17 @@ export default function TweetGeneratePage() {
           <div>
             <h1 className="text-3xl font-bold text-white">트윗 생성</h1>
             <p className="text-gray-400">
-              프롬프트와 설정을 선택해 트윗을 생성하세요
+              {presetName ? (
+                <>
+                  프리셋{' '}
+                  <span className="text-sky-400 font-semibold">
+                    &quot;{presetName}&quot;
+                  </span>
+                  을(를) 사용 중입니다
+                </>
+              ) : (
+                '프롬프트와 설정을 선택해 트윗을 생성하세요'
+              )}
             </p>
           </div>
         </div>

@@ -192,6 +192,21 @@ export async function getAllPresets(): Promise<TweetPreset[]> {
 }
 
 /**
+ * 프리셋 조회 (ID로)
+ */
+export async function getPreset(id: string): Promise<TweetPreset | null> {
+  const db = await getDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_PRESETS], 'readonly');
+    const store = transaction.objectStore(STORE_PRESETS);
+    const request = store.get(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result || null);
+  });
+}
+
+/**
  * 프리셋 삭제
  */
 export async function deletePreset(id: string): Promise<void> {
