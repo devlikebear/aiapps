@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button, Select, Input, RangeSlider } from '@aiapps/ui';
 import { useAudioStore } from '@/lib/stores/audio-store';
 import { useGoogleDriveStore } from '@/lib/stores/google-drive-store';
+import { useAudioGeneration } from '@/lib/hooks/useMediaGeneration';
 import { useGoogleDriveUpload } from '@/lib/google-drive/hooks';
 import { GAME_PRESETS } from '@/lib/audio/types';
 import type { GameGenre, AudioType } from '@/lib/audio/types';
@@ -118,6 +119,47 @@ export default function AudioCreatePage() {
 
     loadRelatedAudio();
   }, [type, genre, customBpm, preset.bpm.default, duration, preset]);
+
+  // 오디오 생성 완료 이벤트 리스너
+  useAudioGeneration((event) => {
+    // eslint-disable-next-line no-console
+    console.log('[AudioGenerator] Audio generation completed:', event);
+
+    // 관련 오디오 새로 고침
+    void (async () => {
+      try {
+        const allAudio = await getAllAudio();
+
+        // 현재 설정에서 태그 생성
+        const currentBpm = customBpm || preset.bpm.default;
+        const currentTags = generateAudioTags({
+          type,
+          genre,
+          bpm: currentBpm,
+          duration,
+        });
+
+        // 태그가 일치하는 오디오 필터링
+        const filtered = allAudio.filter((audio) =>
+          currentTags.some((tag) => audio.tags?.includes(tag))
+        );
+
+        // 최신순 정렬
+        filtered.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setRelatedAudio(filtered.slice(0, 6)); // 최대 6개만 표시
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to refresh related audio:', error);
+      }
+    })();
+  });
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
