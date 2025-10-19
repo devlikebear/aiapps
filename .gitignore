@@ -5,6 +5,8 @@ AGENTS.md
 
 # Plans (exclude PLAN.md - track project plan)
 RESTRUCTURE_PLAN.md
+WORK_PLAN_*.md
+*_PLAN.md
 
 # Backup files
 *.old
