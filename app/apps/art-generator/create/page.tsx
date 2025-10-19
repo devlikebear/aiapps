@@ -784,6 +784,107 @@ export default function ArtCreatePage() {
           </div>
         )}
 
+        {/* Recent Generated Images Section */}
+        {_recentImages.length > 0 && (
+          <div className="app-card p-6 md:p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">✨ 최근 생성 (최대 5개)</h2>
+              <p className="text-sm text-gray-400">
+                최근에 생성된 이미지 {_recentImages.length}개
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {_recentImages.map((image, index) => {
+                const dataUrl = image.data.startsWith('data:')
+                  ? image.data
+                  : `data:image/png;base64,${image.data}`;
+
+                return (
+                  <div
+                    key={image.id}
+                    className="app-card overflow-hidden group cursor-pointer hover:ring-2 hover:ring-cyan-500/50 transition-all relative"
+                  >
+                    {/* Rank Badge */}
+                    <div className="absolute top-2 left-2 z-10 bg-cyan-600 text-white px-2 py-1 rounded text-xs font-medium">
+                      #{index + 1}
+                    </div>
+
+                    {/* Thumbnail */}
+                    <div
+                      className="relative aspect-square bg-gray-800"
+                      onClick={() => setSelectedImage(image)}
+                    >
+                      <Image
+                        src={dataUrl}
+                        alt={image.metadata.prompt}
+                        fill
+                        className="object-contain"
+                        unoptimized
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                        <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3 space-y-2">
+                      <p className="text-xs line-clamp-2 text-gray-400">
+                        {image.metadata.prompt}
+                      </p>
+
+                      {/* Metadata */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {image.metadata.width && image.metadata.height && (
+                          <span>
+                            {image.metadata.width}×{image.metadata.height}
+                          </span>
+                        )}
+                        {image.metadata.style && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate">
+                              {image.metadata.style}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadRelated(image.data, image.id, 'png');
+                          }}
+                          variant="primary"
+                          size="sm"
+                          className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-xs"
+                        >
+                          <Download className="w-3 h-3" />
+                          PNG
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadRelated(image.data, image.id, 'jpg');
+                          }}
+                          variant="primary"
+                          size="sm"
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-xs"
+                        >
+                          <Download className="w-3 h-3" />
+                          JPG
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Related Images Section */}
         {relatedImages.length > 0 && (
           <div className="app-card p-6 md:p-8 space-y-6">

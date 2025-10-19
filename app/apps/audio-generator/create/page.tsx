@@ -627,6 +627,101 @@ export default function AudioCreatePage() {
           </div>
         )}
 
+        {/* Recent Generated Audio Section */}
+        {_recentAudio.length > 0 && (
+          <div className="app-card p-6 md:p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">✨ 최근 생성 (최대 5개)</h2>
+              <p className="text-sm text-gray-400">
+                최근에 생성된 오디오 {_recentAudio.length}개
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {_recentAudio.map((audio, index) => (
+                <div
+                  key={audio.id}
+                  className="app-card p-4 space-y-3 hover:ring-2 hover:ring-cyan-500/50 transition-all"
+                >
+                  {/* Rank & Timestamp */}
+                  <div className="flex items-start justify-between">
+                    <p className="text-xs text-gray-400">
+                      #{index + 1} •{' '}
+                      {new Date(audio.createdAt).toLocaleDateString('ko-KR', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+
+                  {/* Prompt */}
+                  <p className="text-sm line-clamp-2 font-medium">
+                    {audio.metadata.prompt}
+                  </p>
+
+                  {/* Metadata */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                    <div>
+                      <span className="text-gray-500">타입:</span>{' '}
+                      {audio.metadata.type === 'bgm' ? '🎼 BGM' : '⚡ SFX'}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">장르:</span>{' '}
+                      {String(audio.metadata.genre)}
+                    </div>
+                    {typeof audio.metadata.bpm === 'number' && (
+                      <div>
+                        <span className="text-gray-500">BPM:</span>{' '}
+                        {audio.metadata.bpm}
+                      </div>
+                    )}
+                    {typeof audio.metadata.duration === 'number' && (
+                      <div>
+                        <span className="text-gray-500">길이:</span>{' '}
+                        {audio.metadata.duration}초
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => togglePlayRelated(audio.id, audio.data)}
+                      variant="primary"
+                      size="sm"
+                      className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      {playingAudioId === audio.id ? (
+                        <>
+                          <Pause className="w-4 h-4" />
+                          정지
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          재생
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        handleDownloadRelated(audio.data, audio.id, 'wav')
+                      }
+                      variant="secondary"
+                      size="sm"
+                      title="WAV 다운로드"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Related Audio Section */}
         {relatedAudio.length > 0 && (
           <div className="app-card p-6 md:p-8 space-y-6">
