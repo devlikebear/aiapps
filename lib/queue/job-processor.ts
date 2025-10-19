@@ -161,7 +161,7 @@ export class JobProcessor {
       format: 'wav',
       metadata: {
         genre: job.params.genre,
-        mood: result.metadata?.mood as string || 'unknown',
+        mood: (result.metadata?.mood as string) || 'unknown',
         bpm: job.params.bpm || 0,
         instruments: (result.metadata?.instruments as string[]) || [],
         duration: job.params.duration || 0,
@@ -208,24 +208,30 @@ export class JobProcessor {
     await this.saveGeneratedImages(job, images);
 
     // 각 생성된 이미지에 대해 이벤트 발생
-    images.forEach((image, index) => {
-      mediaGenerationEmitter.emitImageGenerated({
-        id: `${job.id}-${index}`,
-        data: image.data,
-        format: 'png',
-        metadata: {
-          style: job.params.style,
-          width: (image.metadata?.width as number) || 512,
-          height: (image.metadata?.height as number) || 512,
-          aspectRatio: (image.metadata?.aspectRatio as number) || 1.0,
-          fileSize: (image.metadata?.fileSize as number) || 0,
-          prompt: job.params.prompt,
-          quality: job.params.quality || 'standard',
-          createdAt: new Date().toISOString(),
-          hasWatermark: true,
-        },
-      });
-    });
+    images.forEach(
+      (
+        image: { data: string; metadata?: Record<string, unknown> },
+        index: number
+      ) => {
+        const imgMetadata = (image.metadata as Record<string, unknown>) || {};
+        mediaGenerationEmitter.emitImageGenerated({
+          id: `${job.id}-${index}`,
+          data: image.data,
+          format: 'png',
+          metadata: {
+            style: job.params.style,
+            width: (imgMetadata.width as number) || 512,
+            height: (imgMetadata.height as number) || 512,
+            aspectRatio: (imgMetadata.aspectRatio as number) || 1.0,
+            fileSize: (imgMetadata.fileSize as number) || 0,
+            prompt: job.params.prompt,
+            quality: job.params.quality || 'standard',
+            createdAt: new Date().toISOString(),
+            hasWatermark: true,
+          },
+        });
+      }
+    );
 
     // eslint-disable-next-line no-console
     console.log(`[JobProcessor] Image generate job completed: ${job.id}`);
