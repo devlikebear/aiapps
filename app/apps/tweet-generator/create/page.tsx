@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Sparkles, AlertCircle, ArrowLeft, Copy, Trash2 } from 'lucide-react';
 import { TONE_DESCRIPTIONS } from '@/lib/tweet/types';
 import { jobQueue } from '@/lib/queue';
 import { useTweetGeneration } from '@/lib/hooks/useMediaGeneration';
+import { getAllTweets } from '@/lib/tweet/storage';
+import type { StoredTweet } from '@/lib/tweet/types';
 
 const TONE_OPTIONS = [
   { value: 'casual', label: '캐주얼' },
@@ -36,6 +38,7 @@ export default function TweetGeneratePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatedTweet, setGeneratedTweet] = useState<string | null>(null);
+  const [recentTweets, setRecentTweets] = useState<StoredTweet[]>([]);
 
   // 자동 높이 조정
   useEffect(() => {
@@ -45,6 +48,29 @@ export default function TweetGeneratePage() {
     }
   }, [prompt]);
 
+  // 최근 트윗 로드
+  useEffect(() => {
+    const loadRecentTweets = async () => {
+      try {
+        const allTweets = await getAllTweets();
+        // 최신순 정렬 후 최대 5개만 표시
+        const sorted = allTweets.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRecentTweets(sorted.slice(0, 5));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load recent tweets:', error);
+      }
+    };
+
+    loadRecentTweets();
+  }, []);
+
   // 트윗 생성 완료 이벤트 구독
   useTweetGeneration((event) => {
     // eslint-disable-next-line no-console
@@ -52,6 +78,26 @@ export default function TweetGeneratePage() {
 
     // 생성된 트윗 표시
     setGeneratedTweet(event.text);
+
+    // 최근 트윗 새로고침
+    const loadRecentTweets = async () => {
+      try {
+        const allTweets = await getAllTweets();
+        const sorted = allTweets.sort((a, b) => {
+          const dateA =
+            a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setRecentTweets(sorted.slice(0, 5));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load recent tweets:', error);
+      }
+    };
+
+    void loadRecentTweets();
 
     // 3초 후 자동 초기화 (사용자가 라이브러리로 이동할 수 있도록)
     setTimeout(() => {
@@ -239,10 +285,63 @@ export default function TweetGeneratePage() {
           </div>
 
           {/* 결과 영역 */}
-          <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 sticky top-24">
+          <div className="lg:col-span-1 space-y-6">
+            {/* 최근 생성된 트윗 */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
               <h2 className="text-lg font-semibold text-white mb-4">
-                생성된 트윗
+                ✨ 최근 생성 (최대 5개)
+              </h2>
+
+              {recentTweets.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {recentTweets.map((tweet, index) => (
+                    <div
+                      key={tweet.id}
+                      className="bg-gray-700/50 border border-gray-600 rounded-lg p-3 hover:border-cyan-500/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <p className="text-xs text-gray-400">
+                          #{index + 1} •{' '}
+                          {new Date(tweet.createdAt).toLocaleDateString(
+                            'ko-KR',
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }
+                          )}
+                        </p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(tweet.text);
+                          }}
+                          className="p-1 hover:bg-gray-600 rounded transition-colors"
+                          title="복사"
+                        >
+                          <Copy className="w-4 h-4 text-gray-400 hover:text-cyan-400" />
+                        </button>
+                      </div>
+                      <p className="text-white text-xs leading-relaxed break-words line-clamp-3">
+                        {tweet.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <Sparkles className="w-8 h-8 text-cyan-400 mx-auto mb-2 opacity-50" />
+                  <p className="text-gray-400 text-xs">
+                    생성된 트윗이 없습니다
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 현재 생성 상태 */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <h2 className="text-lg font-semibold text-white mb-4">
+                생성 상태
               </h2>
 
               {error && (
@@ -253,7 +352,7 @@ export default function TweetGeneratePage() {
               )}
 
               {generatedTweet ? (
-                <div className="bg-gradient-to-r from-sky-900/30 to-cyan-900/30 border border-sky-500/50 rounded-lg p-4 mb-4 animate-pulse">
+                <div className="bg-gradient-to-r from-sky-900/30 to-cyan-900/30 border border-sky-500/50 rounded-lg p-4 animate-pulse">
                   <p className="text-sm text-white font-medium mb-3">
                     ✨ 방금 생성됨!
                   </p>
@@ -261,22 +360,13 @@ export default function TweetGeneratePage() {
                     {generatedTweet}
                   </p>
                   <p className="text-xs text-gray-400 mt-3">
-                    라이브러리에서 이 트윗을 저장하고 공유할 수 있습니다.
+                    자동으로 리스트에 추가됩니다.
                   </p>
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Sparkles className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
-                  <p className="text-gray-300 text-sm font-medium mb-2">
-                    작업 큐 기반 생성
-                  </p>
-                  <p className="text-gray-400 text-xs">
-                    생성 버튼을 누르면 백그라운드에서
-                    <br />
-                    비동기로 처리됩니다.
-                    <br />
-                    완성되면 여기에 표시됩니다!
-                  </p>
+                <div className="text-center py-6">
+                  <Sparkles className="w-10 h-10 text-cyan-400 mx-auto mb-2 opacity-50" />
+                  <p className="text-gray-300 text-sm">대기 중</p>
                 </div>
               )}
             </div>
