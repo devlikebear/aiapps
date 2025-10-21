@@ -34,6 +34,15 @@ const apps: AppInfo[] = [
     href: '/apps/art-generator',
   },
   {
+    id: 'sprite-generator',
+    name: 'AI Sprite Generator',
+    icon: '🎮',
+    category: 'Animation',
+    description: '참조 애니메이션에서 캐릭터를 교체하여 스프라이트 생성',
+    status: 'available',
+    href: '/apps/sprite-generator',
+  },
+  {
     id: 'video-generator',
     name: 'AI Video Generator',
     icon: '🎬',
